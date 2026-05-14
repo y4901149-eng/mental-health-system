@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mentalhealth.mapper.AssessmentMapper">
+    <!--
+        作用：AssessmentMapper 的 XML 映射文件
+    -->
+    <!-- 查询量表及其所有题目 -->
+    <resultMap id="AssessmentWithQuestionsMap" type="com.mentalhealth.entity.Assessment">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="type" column="type"/>
+        <result property="status" column="status"/>
+        <collection property="questions" ofType="com.mentalhealth.entity.AssessmentQuestion"
+                    column="id" select="selectQuestionsByAssessmentId"/>
+    </resultMap>
+
+    <select id="selectQuestionsByAssessmentId" resultType="com.mentalhealth.entity.AssessmentQuestion">
+        SELECT * FROM assessment_question WHERE assessment_id = #{id} ORDER BY sort_order ASC
+    </select>
+</mapper>
