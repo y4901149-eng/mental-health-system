@@ -2,12 +2,15 @@ package com.mentalhealth.service;
 
 import com.mentalhealth.config.AIConfig;
 import com.mentalhealth.entity.CrisisAlert;
+import com.mentalhealth.entity.CrisisKeyword;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class AIService {
@@ -18,13 +21,48 @@ public class AIService {
     @Autowired(required = false)
     private CrisisAlertService crisisAlertService;
 
+    @Autowired(required = false)
+    private CrisisKeywordService crisisKeywordService;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
-    /** 自杀/自伤检测关键词 */
-    private static final String[] CRISIS_KEYWORDS = {
+    /** 从数据库加载的关键词（启动时加载，运行时动态刷新） */
+    private volatile List<String> dbKeywords = new ArrayList<>();
+
+    /** 自杀/自伤检测关键词（写死 fallback，数据库加载失败时使用） */
+    private static final String[] FALLBACK_KEYWORDS = {
             "自杀", "轻生", "不想活", "活不下去", "想死", "结束生命",
             "伤害自己", "自残", "自伤", "死了算了", "没有活着的意义"
     };
+
+    /** 启动时从数据库加载启用的关键词 */
+    @PostConstruct
+    public void initKeywords() {
+        reloadKeywords();
+    }
+
+    /** 重新加载关键词（可外部调用） */
+    public void reloadKeywords() {
+        try {
+            if (crisisKeywordService != null) {
+                List<CrisisKeyword> list = crisisKeywordService.lambdaQuery()
+                        .eq(CrisisKeyword::getEnabled, 1)
+                        .list();
+                dbKeywords = list.stream()
+                        .map(CrisisKeyword::getKeyword)
+                        .collect(Collectors.toList());
+                System.out.println("✅ 已从数据库加载 " + dbKeywords.size() + " 个危机关键词");
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ 从数据库加载关键词失败: " + e.getMessage());
+        }
+    }
+
+    /** 获取当前使用的关键词列表（数据库优先，失败时用 fallback） */
+    private List<String> getKeywords() {
+        if (!dbKeywords.isEmpty()) return dbKeywords;
+        return Arrays.asList(FALLBACK_KEYWORDS);
+    }
 
     /** 系统提示词 */
     private static final String SYSTEM_PROMPT =
@@ -115,11 +153,12 @@ public class AIService {
         return FALLBACK_REPLIES[new Random().nextInt(FALLBACK_REPLIES.length)];
     }
 
-    /** 检测危机关键词 */
+    /** 检测危机关键词（从数据库读取，失败时用 fallback） */
     private boolean containsCrisisKeyword(String text) {
         if (text == null) return false;
+        List<String> keywords = getKeywords();
         String lower = text.toLowerCase();
-        for (String kw : CRISIS_KEYWORDS) {
+        for (String kw : keywords) {
             if (lower.contains(kw)) return true;
         }
         return false;

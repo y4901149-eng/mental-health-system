@@ -35,6 +35,26 @@ public class CrisisAlertController {
         return ResultVO.success();
     }
 
+    /** 标记已通知监护人 */
+    @PostMapping("/notify")
+    public ResultVO<?> notifyGuardian(@RequestBody java.util.Map<String, Object> body) {
+        Long id = Long.valueOf(body.get("id").toString());
+        com.mentalhealth.entity.CrisisAlert alert = crisisAlertService.getById(id);
+        if (alert != null) {
+            alert.setGuardianNotified(1);
+            try {
+                String t = (String) body.get("notifyTime");
+                if (t != null) alert.setGuardianNotifyTime(java.time.LocalDateTime.parse(t));
+            } catch (Exception e) {
+                alert.setGuardianNotifyTime(java.time.LocalDateTime.now());
+            }
+            alert.setGuardianNotifyMethod((String) body.get("notifyMethod"));
+            alert.setGuardianNotifyRemark((String) body.get("notifyRemark"));
+            crisisAlertService.updateById(alert);
+        }
+        return ResultVO.success();
+    }
+
     @DeleteMapping("/{id}")
     public ResultVO<?> delete(@PathVariable Long id) {
         crisisAlertService.removeById(id);
