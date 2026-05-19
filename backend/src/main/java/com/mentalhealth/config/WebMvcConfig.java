@@ -30,6 +30,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
             "/api/user/register",
             "/api/article/**",
             "/api/assessment/list",
+            "/api/crisis/keywords",
             "/uploads/**"
     );
 
