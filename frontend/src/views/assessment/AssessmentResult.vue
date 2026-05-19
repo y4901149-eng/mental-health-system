@@ -1,8 +1,8 @@
 <template>
   <div class="assessment-result-page">
-    <div v-if="loading" class="state-card">
-      <i class="el-icon-loading state-icon"></i>
-      <p>正在生成测评结果报告...</p>
+    <div v-if="loading" class="state-panel">
+      <i class="el-icon-loading"></i>
+      <span>正在加载测评结果...</span>
     </div>
 
     <el-result
@@ -25,61 +25,55 @@
     </el-empty>
 
     <template v-else>
-      <section class="overview-card">
-        <div class="overview-left">
-          <div class="level-icon" :class="'level-' + normalizedLevel">
-            <i :class="levelIcon"></i>
-          </div>
-          <div>
-            <p class="eyebrow">心理测评结果报告</p>
-            <h1>{{ assessmentTitle }}</h1>
-            <p class="submit-time">提交时间：{{ formatTime(record.submitTime) }}</p>
-          </div>
+      <section class="result-header">
+        <div>
+          <h1>测评结果</h1>
+          <p>{{ assessmentTitle }}</p>
         </div>
-        <div class="score-panel">
+        <div class="submit-time">提交时间：{{ formatTime(record.submitTime) }}</div>
+      </section>
+
+      <section class="overview-panel">
+        <div class="score-block">
           <span class="score-number">{{ displayScore }}</span>
           <span class="score-unit">分</span>
-          <el-tag :type="levelType" effect="dark" class="level-tag">{{ levelText }}</el-tag>
+        </div>
+        <div class="level-block">
+          <span class="level-label">结果等级</span>
+          <strong :class="'level-' + normalizedLevel">{{ levelText }}</strong>
+          <p>{{ levelDescription }}</p>
         </div>
       </section>
 
-      <el-row :gutter="18" class="content-row">
-        <el-col :xs="24" :sm="24" :md="10">
-          <el-card shadow="never" class="report-card">
-            <div slot="header" class="card-title">
-              <i class="el-icon-data-analysis"></i>
-              <span>结果解释</span>
+      <el-row :gutter="18">
+        <el-col :xs="24" :md="10">
+          <el-card shadow="never" class="info-card">
+            <div slot="header" class="card-title">结果信息</div>
+            <div class="info-row">
+              <span>测评名称</span>
+              <strong>{{ assessmentTitle }}</strong>
             </div>
-            <div class="level-summary">
-              <div class="level-name">{{ levelText }}</div>
-              <p>{{ levelDescription }}</p>
+            <div class="info-row">
+              <span>测评分数</span>
+              <strong>{{ displayScore }} 分</strong>
             </div>
-            <div class="metric-list">
-              <div class="metric-item">
-                <span>测评分数</span>
-                <strong>{{ displayScore }} 分</strong>
-              </div>
-              <div class="metric-item">
-                <span>结果等级</span>
-                <strong>{{ levelText }}</strong>
-              </div>
-              <div class="metric-item">
-                <span>测评编号</span>
-                <strong>#{{ record.id }}</strong>
-              </div>
+            <div class="info-row">
+              <span>结果等级</span>
+              <strong>{{ levelText }}</strong>
+            </div>
+            <div class="info-row">
+              <span>记录编号</span>
+              <strong>#{{ record.id }}</strong>
             </div>
           </el-card>
         </el-col>
 
-        <el-col :xs="24" :sm="24" :md="14">
-          <el-card shadow="never" class="report-card advice-card">
-            <div slot="header" class="card-title">
-              <i class="el-icon-guide"></i>
-              <span>个性化建议</span>
-            </div>
-            <p class="advice-text">{{ record.suggestion || fallbackSuggestion }}</p>
+        <el-col :xs="24" :md="14">
+          <el-card shadow="never" class="info-card">
+            <div slot="header" class="card-title">建议</div>
+            <p class="suggestion-text">{{ normalizedSuggestion }}</p>
             <el-alert
-              title="测评结果仅供自我了解和情绪管理参考，不能替代专业诊断。若持续感到痛苦或出现安全风险，请及时寻求专业帮助。"
+              title="本结果仅供自我了解和学习参考，不作为医学诊断。若困扰持续或影响学习生活，建议向辅导员、校心理中心或专业人员寻求帮助。"
               type="info"
               :closable="false"
               show-icon>
@@ -88,7 +82,7 @@
         </el-col>
       </el-row>
 
-      <div class="action-bar">
+      <div class="action-row">
         <el-button @click="goList">返回测评列表</el-button>
         <el-button type="primary" @click="retakeAssessment">重新测评</el-button>
       </div>
@@ -121,44 +115,26 @@ export default {
     displayScore() {
       return this.record && this.record.totalScore != null ? this.record.totalScore : '--'
     },
-    levelIcon() {
-      const map = {
-        normal: 'el-icon-success',
-        mild: 'el-icon-warning-outline',
-        moderate: 'el-icon-warning',
-        severe: 'el-icon-error'
-      }
-      return map[this.normalizedLevel] || 'el-icon-info'
-    },
-    levelType() {
-      const map = {
-        normal: 'success',
-        mild: 'warning',
-        moderate: 'warning',
-        severe: 'danger'
-      }
-      return map[this.normalizedLevel] || 'info'
-    },
     levelText() {
       const map = {
-        normal: '状态良好',
-        mild: '轻度困扰',
-        moderate: '中度困扰',
-        severe: '重度困扰'
+        normal: '状态平稳',
+        mild: '轻度关注',
+        moderate: '需要关注',
+        severe: '重点关注'
       }
-      return map[this.normalizedLevel] || '未知结果'
+      return map[this.normalizedLevel] || '未分级'
     },
     levelDescription() {
       const map = {
-        normal: '当前测评结果整体较平稳，可以继续保持规律作息、适量运动和稳定的情绪记录习惯。',
-        mild: '结果提示近期可能存在轻度情绪压力，建议关注睡眠、压力来源和自我调节节奏。',
-        moderate: '结果提示情绪困扰较明显，建议主动寻求家人、朋友或专业咨询支持。',
-        severe: '结果提示需要高度关注当前状态，建议尽快联系专业心理咨询或医疗机构获得帮助。'
+        normal: '当前结果整体处于较平稳范围。建议继续保持规律作息，并持续关注情绪变化。',
+        mild: '结果提示近期可能有一定压力或情绪波动。建议调整节奏，留意睡眠、学习负荷和人际支持。',
+        moderate: '结果提示当前困扰较明显。建议主动与老师、家人或校心理中心沟通，必要时预约咨询。',
+        severe: '结果提示需要重点关注当前状态。建议尽快联系校心理中心或专业人员获得支持。'
       }
-      return map[this.normalizedLevel] || '暂无明确解释，请结合测评建议继续关注自己的状态。'
+      return map[this.normalizedLevel] || '请结合建议内容和近期实际情况进行参考。'
     },
-    fallbackSuggestion() {
-      return '建议持续记录情绪变化，保持规律作息，并在需要时寻求可信任的人或专业人员支持。'
+    normalizedSuggestion() {
+      return this.record.suggestion || '建议保持规律作息、适当运动，持续记录情绪变化；如困扰持续，请及时寻求老师或专业人员帮助。'
     }
   },
   created() {
@@ -169,7 +145,7 @@ export default {
       const id = this.$route.params.id
       if (!id) {
         this.record = null
-        this.error = '缺少测评结果编号'
+        this.error = '缺少测评结果编号。'
         return
       }
 
@@ -177,15 +153,12 @@ export default {
       this.error = ''
       getAssessmentRecord(id).then(res => {
         this.record = res.data || null
-        if (!this.record) return
-        if (this.record.assessmentId) {
-          return getAssessmentDetail(this.record.assessmentId)
-            .then(detailRes => {
-              this.assessment = detailRes.data || null
-            })
-            .catch(() => {
-              this.assessment = null
-            })
+        if (this.record && this.record.assessmentId) {
+          return getAssessmentDetail(this.record.assessmentId).then(detailRes => {
+            this.assessment = detailRes.data || null
+          }).catch(() => {
+            this.assessment = null
+          })
         }
       }).catch(() => {
         this.record = null
@@ -223,240 +196,178 @@ export default {
 .assessment-result-page {
   max-width: 980px;
   margin: 0 auto;
-  padding: 28px 24px 42px;
+  padding: 28px 24px 44px;
 }
 
-.state-card {
-  min-height: 280px;
-  background: #fff;
-  border-radius: 10px;
+.result-header {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #606266;
-  box-shadow: 0 8px 24px rgba(64, 158, 255, 0.08);
-}
-
-.state-icon {
-  font-size: 34px;
-  color: #409eff;
-  margin-bottom: 14px;
-}
-
-.result-state {
-  background: #fff;
-  border-radius: 10px;
-  padding: 40px 20px;
-}
-
-.overview-card {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  background: linear-gradient(135deg, #ffffff 0%, #f4f9ff 100%);
-  border: 1px solid #e8f0fb;
-  border-radius: 12px;
-  padding: 26px;
-  box-shadow: 0 10px 30px rgba(64, 158, 255, 0.1);
+  align-items: flex-start;
+  gap: 20px;
   margin-bottom: 18px;
 }
 
-.overview-left {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  min-width: 0;
-}
-
-.level-icon {
-  width: 72px;
-  height: 72px;
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 34px;
-  flex-shrink: 0;
-}
-
-.level-normal {
-  color: #67c23a;
-  background: #edf8e9;
-}
-
-.level-mild,
-.level-moderate {
-  color: #e6a23c;
-  background: #fff7e8;
-}
-
-.level-severe {
-  color: #f56c6c;
-  background: #fff0f0;
-}
-
-.level-unknown {
-  color: #909399;
-  background: #f4f4f5;
-}
-
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 13px;
-  color: #409eff;
-  font-weight: 600;
-}
-
-.overview-card h1 {
+.result-header h1 {
   margin: 0;
   color: #2c3e50;
-  font-size: 24px;
-  line-height: 1.35;
+  font-size: 26px;
 }
 
+.result-header p,
 .submit-time {
   margin: 8px 0 0;
-  color: #909399;
-  font-size: 13px;
+  color: #6f7d8f;
+  font-size: 14px;
 }
 
-.score-panel {
-  width: 160px;
-  min-height: 124px;
-  border-radius: 12px;
-  background: #fff;
-  border: 1px solid #e8f0fb;
-  display: flex;
-  flex-direction: column;
+.overview-panel {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 22px;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  background: #fff;
+  border: 1px solid #dfe7f1;
+  border-radius: 6px;
+  padding: 24px;
+  margin-bottom: 18px;
+}
+
+.score-block {
+  border-right: 1px solid #edf1f7;
+  text-align: center;
 }
 
 .score-number {
-  color: #409eff;
-  font-size: 42px;
+  color: #2c3e50;
+  font-size: 54px;
   line-height: 1;
   font-weight: 800;
 }
 
 .score-unit {
-  color: #909399;
+  color: #7a8798;
+  margin-left: 4px;
+}
+
+.level-label {
+  display: block;
+  color: #7a8798;
   font-size: 13px;
-  margin-top: 4px;
+  margin-bottom: 6px;
 }
 
-.level-tag {
-  margin-top: 12px;
-}
-
-.content-row {
-  margin-bottom: 18px;
-}
-
-.report-card {
-  height: 100%;
-  border-radius: 10px;
-  border-color: #e8f0fb;
-}
-
-.card-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #2c3e50;
-  font-weight: 700;
-}
-
-.card-title i {
-  color: #409eff;
-}
-
-.level-summary {
-  background: #f8fbff;
-  border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.level-name {
-  font-size: 20px;
-  color: #2c3e50;
-  font-weight: 800;
+.level-block strong {
+  display: block;
+  font-size: 22px;
   margin-bottom: 8px;
 }
 
-.level-summary p,
-.advice-text {
+.level-normal {
+  color: #3d8b40;
+}
+
+.level-mild,
+.level-moderate {
+  color: #b7791f;
+}
+
+.level-severe {
+  color: #c0392b;
+}
+
+.level-block p {
+  margin: 0;
   color: #606266;
   font-size: 14px;
   line-height: 1.8;
-  margin: 0;
 }
 
-.metric-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.metric-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid #f0f5ff;
-  color: #909399;
-  font-size: 13px;
-}
-
-.metric-item:last-child {
-  border-bottom: none;
-}
-
-.metric-item strong {
-  color: #2c3e50;
-  font-size: 14px;
-}
-
-.advice-card {
+.info-card,
+.state-panel,
+.result-state {
+  border: 1px solid #dfe7f1;
+  border-radius: 6px;
   background: #fff;
 }
 
-.advice-text {
-  white-space: pre-wrap;
+.info-card {
   margin-bottom: 18px;
 }
 
-.action-bar {
+.card-title {
+  color: #2c3e50;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid #edf1f7;
+  color: #7a8798;
+  font-size: 14px;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row strong {
+  color: #2c3e50;
+  text-align: right;
+}
+
+.suggestion-text {
+  margin: 0 0 16px;
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+}
+
+.action-row {
   display: flex;
   justify-content: center;
   gap: 12px;
-  padding: 18px 0 0;
+  padding-top: 4px;
 }
 
-@media (max-width: 720px) {
+.state-panel {
+  padding: 48px 20px;
+  text-align: center;
+  color: #7a8798;
+}
+
+.state-panel i {
+  color: #409eff;
+  margin-right: 8px;
+}
+
+.result-state {
+  padding: 36px 20px;
+}
+
+@media (max-width: 760px) {
   .assessment-result-page {
-    padding: 18px 14px 32px;
+    padding: 20px 14px 34px;
   }
 
-  .overview-card {
+  .result-header,
+  .action-row {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .overview-left {
-    align-items: flex-start;
+  .overview-panel {
+    grid-template-columns: 1fr;
   }
 
-  .score-panel {
-    width: 100%;
-  }
-
-  .action-bar {
-    flex-direction: column;
+  .score-block {
+    border-right: none;
+    border-bottom: 1px solid #edf1f7;
+    padding-bottom: 18px;
   }
 }
 </style>

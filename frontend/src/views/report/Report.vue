@@ -1,79 +1,83 @@
-<!-- 情绪周报 -->
 <template>
   <div class="report-page">
-    <div class="page-header">
-      <div class="header-left">
-        <h1 class="page-title">📊 情绪周报</h1>
-        <p class="page-subtitle">自动生成每周情绪总结与分析</p>
+    <section class="module-header">
+      <div>
+        <h1>情绪周报</h1>
+        <p>基于近期记录生成情绪统计和建议，用于自我回顾。</p>
       </div>
-      <el-button type="primary" size="medium" @click="handleGenerate" :loading="generating">
-        <i class="el-icon-refresh"></i> 生成周报
+      <el-button type="primary" :loading="generating" @click="handleGenerate">
+        <i class="el-icon-refresh"></i>
+        生成周报
       </el-button>
+    </section>
+
+    <div v-if="loading" class="state-panel">
+      <i class="el-icon-loading"></i>
+      <span>正在加载周报...</span>
     </div>
 
-    <!-- 最新周报 -->
-    <template v-if="report">
-      <!-- 统计卡片 -->
-      <el-row :gutter="16" class="stats-row">
-        <el-col :span="8" v-for="s in statItems" :key="s.label">
-          <el-card shadow="never" :body-style="{ padding: '20px' }">
-            <div class="stat-inner">
-              <div class="stat-icon" :style="{ background: s.bg }">{{ s.icon }}</div>
-              <div class="stat-info">
-                <span class="stat-num">{{ s.value }}</span>
-                <span class="stat-label">{{ s.label }}</span>
-              </div>
-            </div>
+    <el-empty
+      v-else-if="!report"
+      description="暂无情绪周报"
+      class="empty-panel">
+      <el-button type="primary" :loading="generating" @click="handleGenerate">生成周报</el-button>
+    </el-empty>
+
+    <template v-else>
+      <section class="period-panel">
+        <span>统计周期</span>
+        <strong>{{ report.periodStart }} 至 {{ report.periodEnd }}</strong>
+      </section>
+
+      <el-row :gutter="16" class="summary-row">
+        <el-col :xs="12" :sm="12" :md="6" v-for="item in statItems" :key="item.label">
+          <el-card shadow="never" class="summary-card">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+            <small>{{ item.note }}</small>
           </el-card>
         </el-col>
       </el-row>
 
-      <!-- 周报周期 -->
-      <div class="period-bar">
-        <i class="el-icon-date"></i>
-        统计周期：{{ report.periodStart }} ~ {{ report.periodEnd }}
-      </div>
-
-      <!-- 趋势图 -->
-      <el-card shadow="never" class="chart-card">
-        <div slot="header" class="card-header">
-          <span><i class="el-icon-data-line" style="color:#409EFF;"></i> 本周情绪趋势</span>
+      <el-card shadow="never" class="panel-card">
+        <div slot="header" class="panel-header">
+          <strong>周内趋势</strong>
+          <span>情绪评分变化</span>
         </div>
-        <div ref="trendChart" class="chart-box"></div>
+        <div class="chart-shell">
+          <div ref="trendChart" class="chart-box"></div>
+          <el-empty
+            v-if="trendDates.length === 0"
+            description="暂无趋势数据"
+            :image-size="90"
+            class="chart-empty">
+          </el-empty>
+        </div>
       </el-card>
 
-      <!-- AI 总结 -->
-      <el-card shadow="never" class="summary-card">
-        <div class="summary-body">
-          <div class="summary-avatar">🤖</div>
-          <div class="summary-content">
-            <div class="summary-label">AI 周报总结</div>
-            <p class="summary-text">{{ report.summary || '暂无总结' }}</p>
-          </div>
+      <el-card shadow="never" class="panel-card">
+        <div slot="header" class="panel-header">
+          <strong>周报建议</strong>
+          <span>仅供自我了解和学习参考</span>
+        </div>
+        <p class="summary-text">{{ report.summary || '暂无周报建议。' }}</p>
+      </el-card>
+
+      <el-card shadow="never" class="history-card" v-if="historyList.length > 0">
+        <div slot="header" class="panel-header">
+          <strong>历史周报</strong>
+          <span>点击查看详情</span>
+        </div>
+        <div
+          v-for="item in historyList"
+          :key="item.id"
+          class="history-item"
+          @click="viewReport(item)">
+          <span>{{ item.periodStart }} 至 {{ item.periodEnd }}</span>
+          <strong>{{ parseStats(item.statisticsJson).avgScore || '--' }} 分</strong>
         </div>
       </el-card>
     </template>
-
-    <!-- 空状态 -->
-    <el-empty v-else-if="!loading" :image-size="100" description="还没有周报，点击「生成周报」创建">
-      <el-button type="primary" size="medium" @click="handleGenerate" :loading="generating">生成周报</el-button>
-    </el-empty>
-
-    <!-- 加载中 -->
-    <div v-if="loading" class="loading-wrap"><i class="el-icon-loading"></i> 加载中...</div>
-
-    <!-- 历史周报 -->
-    <el-card shadow="never" class="history-card" v-if="historyList.length > 0">
-      <div slot="header" class="card-header">
-        <span><i class="el-icon-time" style="color:#6C63FF;"></i> 历史周报</span>
-      </div>
-      <div class="history-item" v-for="h in historyList" :key="h.id" @click="viewReport(h)">
-        <div class="history-period">{{ h.periodStart }} ~ {{ h.periodEnd }}</div>
-        <div class="history-score" v-if="h.statisticsJson">
-          <el-tag size="mini" type="primary">{{ parseStats(h.statisticsJson).avgScore || '-' }}分</el-tag>
-        </div>
-      </div>
-    </el-card>
   </div>
 </template>
 
@@ -89,11 +93,25 @@ export default {
       historyList: [],
       loading: false,
       generating: false,
-      trendChart: null,
-      statItems: [
-        { icon: '📊', label: '平均情绪', value: '--', bg: '#EBF5FF' },
-        { icon: '📖', label: '日记数量', value: '--', bg: '#F0EFFF' },
-        { icon: '🏷️', label: '主要情绪', value: '--', bg: '#E8F8F0' }
+      trendChart: null
+    }
+  },
+  computed: {
+    stats() {
+      return this.parseStats(this.report ? this.report.statisticsJson : null)
+    },
+    trendDates() {
+      return this.stats.trend && this.stats.trend.dates ? this.stats.trend.dates : []
+    },
+    trendScores() {
+      return this.stats.trend && this.stats.trend.scores ? this.stats.trend.scores : []
+    },
+    statItems() {
+      return [
+        { label: '平均情绪', value: this.formatValue(this.stats.avgScore, '--'), note: '综合评分' },
+        { label: '记录数量', value: this.formatValue(this.stats.diaryCount || this.stats.recordCount, '0'), note: '周内记录' },
+        { label: '主要情绪', value: this.stats.topMood || '--', note: '出现较多' },
+        { label: '报告类型', value: this.report ? this.report.reportType || 'WEEKLY' : '--', note: '统计口径' }
       ]
     }
   },
@@ -101,86 +119,96 @@ export default {
     this.fetchData()
   },
   mounted() {
-    this.$nextTick(() => { this.tryInitChart() })
+    this.$nextTick(() => this.initChart())
     window.addEventListener('resize', this.handleResize)
   },
   beforeDestroy() {
-    if (this.trendChart) this.trendChart.dispose()
     window.removeEventListener('resize', this.handleResize)
+    if (this.trendChart) this.trendChart.dispose()
   },
   methods: {
-    /** 尝试初始化图表（容器可能还没渲染） */
-    tryInitChart() {
-      const el = this.$refs && this.$refs.trendChart
-      if (el && !this.trendChart) {
-        this.trendChart = echarts.init(el)
-      }
-    },
-
     fetchData() {
       this.loading = true
       Promise.all([getLatestReport(), getReportList()]).then(([latestRes, listRes]) => {
-        this.report = latestRes.data
-        this.historyList = (listRes.data || []).filter(h => !this.report || h.id !== this.report.id)
-        this.updateStats()
+        this.report = latestRes.data || null
+        this.historyList = (listRes.data || []).filter(item => !this.report || item.id !== this.report.id)
         this.$nextTick(() => this.renderChart())
-      }).finally(() => { this.loading = false })
+      }).catch(() => {
+        this.$message.error('周报加载失败，请稍后重试。')
+      }).finally(() => {
+        this.loading = false
+      })
     },
     handleGenerate() {
       this.generating = true
       generateReport().then(() => {
-        this.$message.success('周报已生成')
+        this.$message.success('周报已生成。')
         this.fetchData()
-      }).finally(() => { this.generating = false })
+      }).catch(() => {
+        this.$message.error('周报生成失败，请稍后重试。')
+      }).finally(() => {
+        this.generating = false
+      })
     },
-    viewReport(h) {
-      this.report = h
-      this.updateStats()
-      this.$nextTick(() => { this.renderChart(); window.scrollTo({ top: 0, behavior: 'smooth' }) })
+    viewReport(item) {
+      this.report = item
+      this.$nextTick(() => {
+        this.renderChart()
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      })
     },
-    updateStats() {
-      if (!this.report) return
-      const stats = this.parseStats(this.report.statisticsJson)
-      this.statItems = [
-        { icon: '📊', label: '平均情绪', value: stats.avgScore != null ? stats.avgScore + ' 分' : '--', bg: '#EBF5FF' },
-        { icon: '📖', label: '日记数量', value: stats.diaryCount != null ? stats.diaryCount + ' 篇' : '--', bg: '#F0EFFF' },
-        { icon: '🏷️', label: '主要情绪', value: stats.topMood || '--', bg: '#E8F8F0' }
-      ]
+    initChart() {
+      if (this.$refs.trendChart && !this.trendChart) {
+        this.trendChart = echarts.init(this.$refs.trendChart)
+      }
     },
     renderChart() {
-      // 确保图表已初始化（容器可能刚渲染）
-      this.tryInitChart()
-      if (!this.trendChart || !this.report) return
-      const stats = this.parseStats(this.report.statisticsJson)
-      const trend = stats.trend || {}
-      const dates = trend.dates || ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
-      const scores = trend.scores || [50, 55, 48, 62, 58, 70, 65]
+      this.initChart()
+      if (!this.trendChart) return
+      this.trendChart.clear()
       this.trendChart.setOption({
         tooltip: { trigger: 'axis' },
-        grid: { left: 40, right: 15, top: 10, bottom: 25 },
-        xAxis: { type: 'category', data: dates, axisLabel: { color: '#909399' } },
-        yAxis: { type: 'value', min: 0, max: 100, splitLine: { lineStyle: { color: '#F0F5FF' } } },
+        grid: { left: 44, right: 18, top: 24, bottom: 34 },
+        xAxis: {
+          type: 'category',
+          data: this.trendDates,
+          axisTick: { show: false },
+          axisLine: { lineStyle: { color: '#dfe7f1' } },
+          axisLabel: { color: '#7a8798' }
+        },
+        yAxis: {
+          type: 'value',
+          min: 0,
+          max: 100,
+          axisLabel: { color: '#7a8798' },
+          splitLine: { lineStyle: { color: '#edf1f7' } }
+        },
         series: [{
-          type: 'line', data: scores,
-          smooth: true, showSymbol: true, symbolSize: 7,
-          lineStyle: { color: '#409EFF', width: 2 },
-          areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(64,158,255,0.25)' }, { offset: 1, color: 'rgba(64,158,255,0.02)' }
-          ])},
-          itemStyle: { color: '#409EFF' }
+          type: 'line',
+          data: this.trendScores,
+          smooth: true,
+          symbolSize: 6,
+          lineStyle: { color: '#4C78A8', width: 2 },
+          itemStyle: { color: '#4C78A8' },
+          areaStyle: { color: 'rgba(76, 120, 168, 0.08)' }
         }]
       })
       this.trendChart.resize()
     },
-
-    handleResize() {
-      if (this.trendChart) this.trendChart.resize()
-    },
-
     parseStats(json) {
       if (!json) return {}
-      try { return typeof json === 'string' ? JSON.parse(json) : json }
-      catch(e) { return {} }
+      try {
+        return typeof json === 'string' ? JSON.parse(json) : json
+      } catch(e) {
+        return {}
+      }
+    },
+    formatValue(value, fallback) {
+      if (value === null || value === undefined || value === '') return fallback
+      return value
+    },
+    handleResize() {
+      if (this.trendChart) this.trendChart.resize()
     }
   }
 }
@@ -188,39 +216,170 @@ export default {
 
 <style scoped>
 .report-page {
-  max-width: var(--page-width, 1200px); margin: 0 auto; padding: 0 24px 40px;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 28px 24px 44px;
 }
-.page-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 20px; padding-top: 28px;
+
+.module-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 18px;
 }
-.page-title { font-size: 22px; font-weight: 700; color: #2C3E50; }
-.page-subtitle { font-size: 14px; color: #909399; margin-top: 4px; }
-.stats-row { margin-bottom: 16px; }
-.stat-inner { display: flex; align-items: center; gap: 14px; }
-.stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
-.stat-info { display: flex; flex-direction: column; }
-.stat-num { font-size: 20px; font-weight: 700; color: #2C3E50; line-height: 1.2; }
-.stat-label { font-size: 13px; color: #909399; margin-top: 2px; }
-.period-bar { font-size: 13px; color: #909399; margin-bottom: 16px; padding: 8px 14px; background: #F8FAFF; border-radius: 8px; display: inline-block; }
-.period-bar i { margin-right: 6px; }
-.chart-card { margin-bottom: 16px; }
-.chart-box { width: 100%; height: 280px; }
-.card-header { font-weight: 600; font-size: 15px; color: #2C3E50; }
-.card-header i { margin-right: 6px; }
-.summary-card { margin-bottom: 16px; background: #F0F5FF !important; border-color: transparent !important; }
-.summary-body { display: flex; gap: 16px; align-items: flex-start; }
-.summary-avatar { font-size: 36px; flex-shrink: 0; }
-.summary-content { flex: 1; }
-.summary-label { font-size: 14px; font-weight: 600; color: #409EFF; margin-bottom: 8px; }
-.summary-text { font-size: 14px; color: #606266; line-height: 1.8; margin: 0; white-space: pre-wrap; }
-.loading-wrap { text-align: center; padding: 60px 0; color: #909399; font-size: 14px; }
-.loading-wrap i { font-size: 24px; margin-right: 8px; }
-.history-card { margin-top: 8px; }
+
+.module-header h1 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 26px;
+}
+
+.module-header p {
+  margin: 8px 0 0;
+  color: #6f7d8f;
+  font-size: 14px;
+}
+
+.period-panel,
+.summary-card,
+.panel-card,
+.history-card,
+.state-panel,
+.empty-panel {
+  background: #fff;
+  border: 1px solid #dfe7f1;
+  border-radius: 6px;
+}
+
+.period-panel {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  color: #7a8798;
+}
+
+.period-panel strong {
+  color: #2c3e50;
+}
+
+.summary-row {
+  margin-bottom: 18px;
+}
+
+.summary-card {
+  margin-bottom: 16px;
+}
+
+.summary-card ::v-deep .el-card__body {
+  padding: 18px;
+}
+
+.summary-card span,
+.summary-card small {
+  display: block;
+  color: #7a8798;
+  font-size: 13px;
+}
+
+.summary-card strong {
+  display: block;
+  margin: 8px 0;
+  color: #2c3e50;
+  font-size: 24px;
+}
+
+.panel-card,
+.history-card {
+  margin-bottom: 18px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.panel-header strong {
+  color: #2c3e50;
+  font-size: 15px;
+}
+
+.panel-header span {
+  color: #7a8798;
+  font-size: 12px;
+}
+
+.chart-shell {
+  position: relative;
+  min-height: 300px;
+}
+
+.chart-box {
+  width: 100%;
+  height: 300px;
+}
+
+.chart-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.summary-text {
+  margin: 0;
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+}
+
 .history-item {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px; cursor: pointer; border-radius: 8px; transition: background 0.2s;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #edf1f7;
+  cursor: pointer;
+  color: #606266;
+  font-size: 14px;
 }
-.history-item:hover { background: #F0F5FF; }
-.history-period { font-size: 14px; color: #606266; }
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-item strong {
+  color: #2c3e50;
+}
+
+.state-panel,
+.empty-panel {
+  padding: 48px 20px;
+  text-align: center;
+  color: #7a8798;
+}
+
+.state-panel i {
+  color: #409eff;
+  margin-right: 8px;
+}
+
+@media (max-width: 760px) {
+  .report-page {
+    padding: 20px 14px 34px;
+  }
+
+  .module-header,
+  .period-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
 </style>
