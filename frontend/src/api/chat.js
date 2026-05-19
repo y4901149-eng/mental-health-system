@@ -1,4 +1,4 @@
-// AI 共情对话 API
+// AI 对话 API
 
 import request from '@/utils/request'
 

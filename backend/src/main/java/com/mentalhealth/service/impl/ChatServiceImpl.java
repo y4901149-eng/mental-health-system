@@ -11,7 +11,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class ChatServiceImpl implements ChatService {
@@ -38,7 +41,7 @@ public class ChatServiceImpl implements ChatService {
     public ChatSession createSession(Long userId, String title) {
         ChatSession session = new ChatSession();
         session.setUserId(userId);
-        session.setTitle(title != null ? title : "新的对话");
+        session.setTitle((title != null && !title.trim().isEmpty()) ? title.trim() : "新的对话");
         session.setStatus("ACTIVE");
         sessionMapper.insert(session);
         return session;
@@ -47,7 +50,9 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public List<ChatMessage> getSessionMessages(Long sessionId, Long userId) {
         ChatSession session = sessionMapper.selectById(sessionId);
-        if (session == null || !session.getUserId().equals(userId)) return Collections.emptyList();
+        if (session == null || !session.getUserId().equals(userId) || !"ACTIVE".equals(session.getStatus())) {
+            return Collections.emptyList();
+        }
         return messageMapper.selectList(
                 new LambdaQueryWrapper<ChatMessage>()
                         .eq(ChatMessage::getSessionId, sessionId)
@@ -56,15 +61,29 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public Map<String, Object> sendMessage(Long sessionId, Long userId, String content) {
-        // 保存用户消息
+        if (content == null || content.trim().isEmpty()) {
+            throw new RuntimeException("消息内容不能为空");
+        }
+
+        ChatSession session = sessionMapper.selectById(sessionId);
+        if (session == null || !session.getUserId().equals(userId) || !"ACTIVE".equals(session.getStatus())) {
+            throw new RuntimeException("会话不存在或无权访问");
+        }
+
+        String messageContent = content.trim();
+
         ChatMessage userMsg = new ChatMessage();
         userMsg.setSessionId(sessionId);
         userMsg.setSenderRole("USER");
-        userMsg.setContent(content);
+        userMsg.setContent(messageContent);
         messageMapper.insert(userMsg);
 
-        // 调用 AI 服务（真实 AI → 失败时自动 fallback 到 mock）
-        String reply = aiService.getReply(content, userId);
+        String reply;
+        try {
+            reply = aiService.getReply(messageContent, userId);
+        } catch (Exception e) {
+            reply = "抱歉，我现在暂时无法连接到 AI 服务。你可以稍后再试，也可以先把想说的话记录在这里。";
+        }
 
         ChatMessage aiMsg = new ChatMessage();
         aiMsg.setSessionId(sessionId);
@@ -72,19 +91,14 @@ public class ChatServiceImpl implements ChatService {
         aiMsg.setContent(reply);
         messageMapper.insert(aiMsg);
 
-        // 更新会话标题（基于第一条消息）
-        ChatSession session = sessionMapper.selectById(sessionId);
-        if (session != null) {
-            long count = messageMapper.selectCount(
-                    new LambdaQueryWrapper<ChatMessage>()
-                            .eq(ChatMessage::getSessionId, sessionId));
-            if (count <= 2) {
-                String title = content.length() > 20 ? content.substring(0, 20) + "..." : content;
-                session.setTitle(title);
-            }
-            session.setUpdateTime(LocalDateTime.now());
-            sessionMapper.updateById(session);
+        long count = messageMapper.selectCount(
+                new LambdaQueryWrapper<ChatMessage>()
+                        .eq(ChatMessage::getSessionId, sessionId));
+        if (count <= 2) {
+            session.setTitle(buildSessionTitle(messageContent));
         }
+        session.setUpdateTime(LocalDateTime.now());
+        sessionMapper.updateById(session);
 
         Map<String, Object> result = new HashMap<>();
         result.put("userMessage", userMsg);
@@ -99,5 +113,10 @@ public class ChatServiceImpl implements ChatService {
             session.setStatus("DELETED");
             sessionMapper.updateById(session);
         }
+    }
+
+    private String buildSessionTitle(String content) {
+        String compact = content.replaceAll("\\s+", " ");
+        return compact.length() > 20 ? compact.substring(0, 20) + "..." : compact;
     }
 }
