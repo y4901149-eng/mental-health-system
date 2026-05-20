@@ -29,8 +29,7 @@
         </el-col>
         <el-col :span="4">
           <el-select v-model="filters.status" placeholder="状态" size="small" clearable @change="search" style="width:100%;">
-            <el-option label="待处理" value="PENDING" /><el-option label="处理中" value="PROCESSING" />
-            <el-option label="已解决" value="RESOLVED" /><el-option label="已关闭" value="CLOSED" />
+            <el-option label="待处理" value="PENDING" /><el-option label="已解决" value="RESOLVED" />
           </el-select>
         </el-col>
         <el-col :span="6">
@@ -90,7 +89,7 @@
             <el-button type="text" size="mini" @click="showDetail(row)">详情</el-button>
             <el-button v-if="row.guardianNotified !== 1" type="text" size="mini" style="color:#409EFF;" @click="showNotify(row)">通知</el-button>
             <el-button v-if="row.handleStatus === 'PENDING' || row.handleStatus === 'PROCESSING'"
-              type="text" size="mini" style="color:#E6A23C;" @click="showHandle(row)">标记处理</el-button>
+              type="text" size="mini" style="color:#67C23A;" @click="showHandle(row)">标记解决</el-button>
             <el-button type="text" size="mini" style="color:#F56C6C;" @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
@@ -195,12 +194,12 @@
       </div>
     </el-dialog>
 
-    <!-- 标记处理弹窗 -->
-    <el-dialog title="标记已处理" :visible.sync="handleVisible" width="450px" :close-on-click-modal="false">
+    <!-- 标记解决弹窗 -->
+    <el-dialog title="标记已解决" :visible.sync="handleVisible" width="450px" :close-on-click-modal="false">
       <el-input v-model="handleRemark" type="textarea" :rows="4" placeholder="输入处理说明..." />
       <div slot="footer">
         <el-button @click="handleVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitHandle" :loading="handling">确认处理</el-button>
+        <el-button type="primary" @click="submitHandle" :loading="handling">确认解决</el-button>
       </div>
     </el-dialog>
   </div>
@@ -289,8 +288,8 @@ export default {
     getKeyword(s){return extractKeyword(s)},
     alertLevel(l){return alertLevelText(l)},
     alertType(l){return alertLevelType(l)},
-    statusType(s){const m={'PENDING':'danger','PROCESSING':'warning','RESOLVED':'success','CLOSED':'info'};return m[s]||'info'},
-    statusText(s){const m={'PENDING':'待处理','PROCESSING':'处理中','RESOLVED':'已解决','CLOSED':'已关闭'};return m[s]||s},
+    statusType(s){const m={'PENDING':'danger','PROCESSING':'warning','RESOLVED':'success'};return m[s]||'info'},
+    statusText(s){const m={'PENDING':'待处理','PROCESSING':'待处理','RESOLVED':'已解决'};return m[s]||s},
     riskRowClass({row}){if(!row)return'';if(row.alertLevel>=4)return'risk-row-danger';if(row.alertLevel>=3)return'risk-row-orange';return''},
     fmt(t){if(!t)return'';const d=new Date(t);if(isNaN(d.getTime()))return t;return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')},
     showDetail(row){this.detail=row;this.detailVisible=true},
@@ -313,7 +312,7 @@ export default {
     submitHandle(){
       this.handling=true
       handleCrisis(this.currentAlert.id,this.handleRemark||'已处理').then(()=>{
-        this.$message.success('已标记处理');this.handleVisible=false;this.fetchList()
+        this.$message.success('已标记为解决');this.handleVisible=false;this.fetchList()
       }).catch(()=>{
         this.$message.error('处理失败，请重试')
       }).finally(()=>{this.handling=false})

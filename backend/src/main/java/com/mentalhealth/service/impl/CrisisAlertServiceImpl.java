@@ -54,7 +54,7 @@ public class CrisisAlertServiceImpl extends ServiceImpl<CrisisAlertMapper, Crisi
     public void handleAlert(Long id, Long adminId, String remark) {
         CrisisAlert alert = getById(id);
         if (alert != null) {
-            alert.setHandleStatus("PROCESSING");
+            alert.setHandleStatus("RESOLVED");
             alert.setHandledBy(adminId);
             alert.setHandleRemark(remark);
             updateById(alert);

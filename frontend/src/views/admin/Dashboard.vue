@@ -50,18 +50,22 @@
             :header-cell-style="hdrStyle"
             :cell-style="cellStyle"
             :row-class-name="riskRow">
-            <el-table-column prop="username" label="用户" width="120" />
-            <el-table-column label="等级" width="100" align="center">
+            <el-table-column label="用户" width="100" align="center">
+              <template slot-scope="{row}">{{ row.username }}</template>
+            </el-table-column>
+            <el-table-column label="等级" width="80" align="center">
               <template slot-scope="{row}"><el-tag size="mini" :type="row.type" effect="dark">{{ row.level }}</el-tag></template>
             </el-table-column>
-            <el-table-column label="最近情绪" width="120" align="center">
+            <el-table-column label="最近情绪" width="100" align="center">
               <template slot-scope="{row}">{{ row.lastMood || '-' }}</template>
             </el-table-column>
-            <el-table-column prop="riskCount" label="风险次数" width="100" align="center" />
-            <el-table-column label="最近活跃" width="180" align="center">
+            <el-table-column label="风险次数" width="80" align="center">
+              <template slot-scope="{row}">{{ row.riskCount }}</template>
+            </el-table-column>
+            <el-table-column label="最近活跃" width="170" align="center">
               <template slot-scope="{row}">{{ fmt(row.lastActive) }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="100" align="center">
+            <el-table-column label="操作" width="80" align="center">
               <template slot-scope="{row}">
                 <el-button type="text" size="mini" style="color:#409EFF;" @click="$router.push({path:'/admin/users',query:{username:row.username}})">详情</el-button>
               </template>
@@ -75,16 +79,18 @@
           <el-table :data="crisisList" stripe size="small" style="width:100%;"
             :header-cell-style="hdrStyle"
             :cell-style="cellStyle">
-            <el-table-column prop="username" label="用户" width="120" />
-            <el-table-column label="等级" width="100" align="center">
+            <el-table-column label="用户" width="100" align="center">
+              <template slot-scope="{row}">{{ row.username }}</template>
+            </el-table-column>
+            <el-table-column label="等级" width="80" align="center">
               <template slot-scope="{row}">
                 <el-tag size="mini" :type="row.levelType" effect="dark">{{ row.levelText }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="关键词" width="120" align="center">
+            <el-table-column label="关键词" width="100" align="center">
               <template slot-scope="{row}"><el-tag size="mini" type="danger">{{ row.keyword }}</el-tag></template>
             </el-table-column>
-            <el-table-column label="时间" width="180" align="center">
+            <el-table-column label="时间" width="170" align="center">
               <template slot-scope="{row}">{{ fmt(row.time) }}</template>
             </el-table-column>
           </el-table>
