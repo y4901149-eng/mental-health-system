@@ -236,17 +236,17 @@
                   <el-tag size="mini" :type="alertRiskType(row.alertLevel)" effect="dark">{{ alertRiskLevel(row.alertLevel) }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="trigger_reason" label="触发原因" min-width="250" show-overflow-tooltip />
+              <el-table-column prop="triggerReason" label="触发原因" min-width="250" show-overflow-tooltip />
               <el-table-column label="状态" width="100">
                 <template slot-scope="{row}">
                   <el-tag size="mini" :type="crisisStatusType(row.handleStatus)">{{ crisisStatusText(row.handleStatus) }}</el-tag>
                 </template>
               </el-table-column>
               <el-table-column label="处理人" width="100">
-                <template slot-scope="{row}">{{ row.handled_by || '-' }}</template>
+                <template slot-scope="{row}">{{ row.handledBy || '-' }}</template>
               </el-table-column>
               <el-table-column label="时间" width="150">
-                <template slot-scope="{row}">{{ formatTime(row.create_time) }}</template>
+                <template slot-scope="{row}">{{ formatTime(row.createTime) }}</template>
               </el-table-column>
             </el-table>
             <el-empty v-if="!crisisLoading && detailCrisis.length===0" description="暂无预警" />
@@ -338,12 +338,13 @@ export default {
   },
   watch: {
     '$route.query.userId': function() { this.handleRouteQuery() },
-    '$route.query.username': function() { this.handleRouteQuery() }
+    '$route.query.username': function() { this.handleRouteQuery() },
+    '$route.query.id': function() { this.handleRouteQuery() }
   },
 
   methods: {
     handleRouteQuery() {
-      const userId = this.$route.query.userId
+      const userId = this.$route.query.userId || this.$route.query.id
       const username = this.$route.query.username
       if (!userId && !username) {
         this.fetchList()

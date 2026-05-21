@@ -91,14 +91,7 @@
 
 <script>
 import request from '@/utils/request'
-
-const RISK_KEYWORDS = ['自杀','想死','不想活','活不下去','结束生命','崩溃','绝望','伤害自己','自残','活着的意义','没有意义','好累','撑不下去']
-const RISK_LEVELS = {
-  '自杀':'高危','想死':'高危','不想活':'高危','活不下去':'高危','结束生命':'高危',
-  '伤害自己':'高危','自残':'高危',
-  '崩溃':'中危','绝望':'中危','撑不下去':'中危',
-  '活着的意义':'关注','没有意义':'关注','好累':'关注'
-}
+import { extractKeyword, riskLevelFromKeyword, riskTypeFromKeyword } from '@/utils/crisisKeywords'
 
 export default {
   name: 'ChatManage',
@@ -142,27 +135,9 @@ export default {
     },
     search(){this.pageNum=1;this.fetch()},
 
-    extractRiskWord(content) {
-      if (!content) return '-'
-      for (const kw of RISK_KEYWORDS) {
-        if (content.includes(kw)) return kw
-      }
-      return '-'
-    },
-    riskLevel(content) {
-      if (!content) return '正常'
-      for (const kw of RISK_KEYWORDS) {
-        if (content.includes(kw)) return RISK_LEVELS[kw] || '关注'
-      }
-      return '正常'
-    },
-    riskType(content) {
-      const lv = this.riskLevel(content)
-      if (lv === '高危') return 'danger'
-      if (lv === '中危') return 'warning'
-      if (lv === '关注') return 'warning'
-      return 'success'
-    },
+    extractRiskWord(content) { return extractKeyword(content) || '-' },
+    riskLevel(content) { return riskLevelFromKeyword(content) },
+    riskType(content) { return riskTypeFromKeyword(content) },
 
     showContext(row) {
       this.contextMessages = []

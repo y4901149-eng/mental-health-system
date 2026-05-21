@@ -21,3 +21,8 @@ export function createCrisis(data) {
 export function deleteCrisis(id) {
   return request({ url: '/crisis/' + id, method: 'delete' })
 }
+
+/** 标记已通知监护人 */
+export function notifyGuardian(data) {
+  return request({ url: '/crisis/notify', method: 'post', data })
+}

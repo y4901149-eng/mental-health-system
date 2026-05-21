@@ -44,6 +44,15 @@
 </template>
 
 <script>
+import { getAssessmentRecord } from '@/api/assessment'
+
+const LEVEL_MAP = {
+  normal: { icon: '😊', type: 'success', text: '正常' },
+  mild: { icon: '🙂', type: 'warning', text: '轻度困扰' },
+  moderate: { icon: '😐', type: 'warning', text: '中度困扰' },
+  severe: { icon: '😔', type: 'danger', text: '重度困扰' }
+}
+
 export default {
   name: 'AssessmentResult',
   data() {
@@ -56,23 +65,21 @@ export default {
     }
   },
   computed: {
-    levelIcon() {
-      const map = { normal: '😊', mild: '🙂', moderate: '😐', severe: '😔' }
-      return map[this.record.level] || '😊'
+    levelInfo() {
+      return LEVEL_MAP[this.record.level] || LEVEL_MAP.normal
     },
-    levelType() {
-      const map = { normal: 'success', mild: 'warning', moderate: 'warning', severe: 'danger' }
-      return map[this.record.level] || 'info'
-    },
-    levelText() {
-      const map = { normal: '正常', mild: '轻度困扰', moderate: '中度困扰', severe: '重度困扰' }
-      return map[this.record.level] || '未知'
-    }
+    levelIcon() { return this.levelInfo.icon },
+    levelType() { return this.levelInfo.type },
+    levelText() { return this.levelInfo.text }
   },
   created() {
-    // 从路由参数获取评估结果 (简化版，实际应该调API获取)
-    if (this.$route.query) {
-      // 将在后端对接时完善
+    const id = this.$route.params.id
+    if (id) {
+      getAssessmentRecord(id).then(res => {
+        if (res.data) this.record = res.data
+      }).catch(() => {
+        this.$message.error('获取评估结果失败')
+      })
     }
   }
 }

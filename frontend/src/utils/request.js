@@ -50,6 +50,13 @@ request.interceptors.response.use(
     if (axios.isCancel(error)) {
       return Promise.reject({ cancelled: true })
     }
+    // 401 → token 过期或未登录，跳转登录页
+    if (error.response && error.response.status === 401) {
+      removeToken()
+      router.push('/login')
+      Message.error('登录已过期，请重新登录')
+      return Promise.reject(error)
+    }
     // 网络错误处理
     if (error.message && error.message.includes('timeout')) {
       Message.error('请求超时，请检查网络')

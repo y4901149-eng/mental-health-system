@@ -67,7 +67,7 @@
             </el-table-column>
             <el-table-column label="操作" width="80" align="center">
               <template slot-scope="{row}">
-                <el-button type="text" size="mini" style="color:#409EFF;" @click="$router.push({path:'/admin/users',query:{username:row.username}})">详情</el-button>
+                <el-button type="text" size="mini" style="color:#409EFF;" @click="$router.push({path:'/admin/users',query:{id:row.userId}})">详情</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -80,7 +80,9 @@
             :header-cell-style="hdrStyle"
             :cell-style="cellStyle">
             <el-table-column label="用户" width="100" align="center">
-              <template slot-scope="{row}">{{ row.username }}</template>
+              <template slot-scope="{row}">
+                <el-button type="text" size="mini" style="color:#409EFF;" @click="goToCrisis(row)">{{ row.username }}</el-button>
+              </template>
             </el-table-column>
             <el-table-column label="等级" width="80" align="center">
               <template slot-scope="{row}">
@@ -106,7 +108,7 @@
           <div class="sys-item">
             <span class="sd" :class="s.online?'g':'r'"></span>
             <span class="sl">{{ s.label }}</span>
-            <span class="sv" :style="{color:s.online?'#67C23A':'#F56C6C'}">{{ s.online ? '正常' : '异常' }}</span>
+            <span class="sv" :style="{color:s.online?'#67C23A':'#F56C6C'}">{{ s.status || (s.online?'正常':'异常') }}</span>
           </div>
         </el-col>
       </el-row>
@@ -117,6 +119,7 @@
 <script>
 import * as echarts from 'echarts'
 import { getCrisisList } from '@/api/crisis'
+import request from '@/utils/request'
 
 export default {
   name: 'Dashboard',
@@ -137,7 +140,7 @@ export default {
         { label:'AI 服务', online:true }, { label:'数据库', online:true },
         { label:'预警系统', online:true }, { label:'后端服务', online:true }
       ],
-      lineChart:null, pieChart:null,
+      lineChart:null, pieChart:null, chartTrend:null, moodDistribution:[], refreshTimer:null,
       currentTime: '',
       hdrStyle: { background:'#F0F4FF', color:'#2C3E50', fontWeight:600, fontSize:'12px', padding:'6px 0' },
       cellStyle: { textAlign:'center', padding:'4px 0', fontSize:'12px' }
@@ -150,11 +153,14 @@ export default {
   mounted() {
     this.fetchData()
     this.fetchCrisis()
-    this.$nextTick(() => { this.initLineChart(); this.initPieChart(); this.updateTime() })
+    this.fetchTrend()
+    this.$nextTick(() => { this.initPieChart(); this.updateTime() })
+    this.refreshTimer = setInterval(() => this.refreshAll(), 60000)
     window.addEventListener('resize', this.handleResize)
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize)
+    if(this.refreshTimer) { clearInterval(this.refreshTimer); this.refreshTimer = null }
     if(this.lineChart)this.lineChart.dispose()
     if(this.pieChart)this.pieChart.dispose()
   },
@@ -165,26 +171,26 @@ export default {
     },
     handleResize() { if(this.lineChart)this.lineChart.resize(); if(this.pieChart)this.pieChart.resize() },
     fetchData() {
-      const token = localStorage.getItem('mental_health_token')
-      const headers = { 'Authorization': 'Bearer ' + token }
-      fetch('/api/admin/dashboard/summary', { headers }).then(r=>r.json()).then(res => {
+      request.get('/admin/dashboard/summary').then(res => {
         const d = res.data || {}
         this.statCards = [
           { icon:'👥', label:'总用户数', value:d.userCount||0, bg:'linear-gradient(135deg,#EBF5FF,#D6E8FF)' },
-          { icon:'🔥', label:'今日活跃', value:d.userCount||0, bg:'linear-gradient(135deg,#E8F8F0,#C8E6D9)' },
-          { icon:'⚠️', label:'高风险用户', value:d.pendingCrisisCount||0, bg:'linear-gradient(135deg,#FFF1F0,#FFD9D8)' },
-          { icon:'💬', label:'AI对话次数', value:d.chatCount||0, bg:'linear-gradient(135deg,#F0EFFF,#DDD9FF)' },
-          { icon:'📝', label:'今日新增日记', value:d.diaryCount||0, bg:'linear-gradient(135deg,#FFF7E6,#FFEAB3)' },
+          { icon:'🔥', label:'今日活跃', value:d.todayActive||0, bg:'linear-gradient(135deg,#E8F8F0,#C8E6D9)' },
+          { icon:'⚠️', label:'高风险用户', value:d.highRiskUsers||0, bg:'linear-gradient(135deg,#FFF1F0,#FFD9D8)' },
+          { icon:'💬', label:'AI对话次数', value:d.todayChatCount||0, bg:'linear-gradient(135deg,#F0EFFF,#DDD9FF)' },
+          { icon:'📝', label:'今日新增日记', value:d.todayDiaryCount||0, bg:'linear-gradient(135deg,#FFF7E6,#FFEAB3)' },
           { icon:'⏳', label:'待处理预警', value:d.pendingCrisisCount||0, bg:'linear-gradient(135deg,#FFF5F5,#FFD6D6)' }
         ]
-      }).catch(()=>{})
-      fetch('/api/admin/dashboard/risk-users', { headers }).then(r=>r.json()).then(res => {
-        const users = res.data || []
-        this.riskUsers = users.map(u => ({
-          username: u.username, level: u.avgScore < 20 ? '高危' : u.avgScore < 40 ? '中危' : '关注',
-          type: u.avgScore < 20 ? 'danger' : u.avgScore < 40 ? 'warning' : 'warning',
-          lastMood: '-', riskCount: '-', lastActive: u.lastDiaryTime || '-', id: u.id
-        }))
+        this.moodDistribution = d.moodDistribution || []
+        // 更新系统运行状态
+        const dbOk = d.systemInfo && d.systemInfo.database === 'connected'
+        this.sysStatus = [
+          { label:'AI 服务', status:'运行中', online:true },
+          { label:'数据库', status: dbOk ? '连接正常' : '连接异常', online: dbOk },
+          { label:'预警系统', status: '24h触发' + (d.crisis24h||0) + '次', online: true },
+          { label:'后端服务', status: '8081在线', online: true }
+        ]
+        this.$nextTick(() => this.initPieChart())
       }).catch(()=>{})
     },
     fetchCrisis() {
@@ -192,6 +198,7 @@ export default {
         const records = (res.data && res.data.records) || []
         // 最近预警列表（取前5条）
         this.crisisList = records.slice(0,5).map(r => ({
+          userId: r.userId,
           username: r.username || '用户' + r.userId,
           levelType: r.alertLevel >= 4 ? 'danger' : r.alertLevel >= 3 ? 'warning' : 'info',
           levelText: r.alertLevel >= 4 ? '高危' : r.alertLevel >= 3 ? '中危' : '关注',
@@ -202,7 +209,7 @@ export default {
         const userMap = {}
         records.forEach(r => {
           const name = r.username || '用户' + r.userId
-          if (!userMap[name]) userMap[name] = { username: name, count:0, maxLevel:0, lastTime:'' }
+          if (!userMap[name]) userMap[name] = { userId: r.userId, username: name, count:0, maxLevel:0, lastTime:'' }
           userMap[name].count++
           if ((r.alertLevel||0) > userMap[name].maxLevel) userMap[name].maxLevel = r.alertLevel
           if (r.createTime && r.createTime > userMap[name].lastTime) userMap[name].lastTime = r.createTime
@@ -211,6 +218,7 @@ export default {
           .sort((a,b) => b.count - a.count || b.maxLevel - a.maxLevel)
           .slice(0,5)
         this.riskUsers = sorted.map(u => ({
+          userId: u.userId,
           username: u.username,
           level: u.maxLevel >= 4 ? '高危' : u.maxLevel >= 3 ? '中危' : '关注',
           type: u.maxLevel >= 4 ? 'danger' : u.maxLevel >= 3 ? 'warning' : 'warning',
@@ -219,6 +227,16 @@ export default {
           lastActive: u.lastTime || ''
         }))
       }).catch(()=>{})
+    },
+    fetchTrend() {
+      request.get('/admin/dashboard/trend').then(res => {
+        this.chartTrend = res.data
+        this.$nextTick(() => this.initLineChart())
+      }).catch(() => {
+        // API 失败时使用空数据，保证图表至少渲染坐标轴
+        this.chartTrend = { dates: [], avgScores: [], highRiskCounts: [] }
+        this.$nextTick(() => this.initLineChart())
+      })
     },
     fmt(t) {
       if (!t) return ''
@@ -235,26 +253,46 @@ export default {
       for (const kw of kws) { if (text.includes(kw)) return kw }
       return '异常'
     },
+    refreshAll() {
+      this.fetchData()
+      this.fetchCrisis()
+      this.fetchTrend()
+    },
+    goToCrisis(row) {
+      if (row && row.userId) {
+        this.$router.push({ path: '/admin/crisis', query: { userId: row.userId } })
+      }
+    },
     initLineChart() {
       const el = this.$refs.lineChart
-      if(!el)return; this.lineChart = echarts.init(el)
+      if(!el)return
+      if (!this.chartTrend) { this.fetchTrend(); return }
+      if (!this.lineChart) this.lineChart = echarts.init(el)
+      const d = this.chartTrend
       this.lineChart.setOption({
-        tooltip:{ trigger:'axis' }, grid:{ left:45, right:15, top:15, bottom:35 },
+        tooltip:{ trigger:'axis', formatter: function(p) {
+          if (!p || !p.length) return ''
+          return '<div style="font-size:13px;line-height:1.8">' +
+            '<div style="font-weight:600;color:#1A2332;margin-bottom:2px">' + p[0].axisValue + '</div>' +
+            '<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#409EFF"></span> 平均情绪分：<b>' + p[0].value + '</b></div>' +
+            '<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#F56C6C"></span> 高风险人数：<b>' + (p[1]?p[1].value:0) + '</b></div>' +
+            '</div>'
+        } }, grid:{ left:45, right:15, top:15, bottom:35 },
         legend:{ data:['平均分','高危人数'], bottom:0, icon:'circle', itemWidth:8, itemHeight:8, textStyle:{fontSize:11} },
-        xAxis:{ type:'category', data:['05-05','05-06','05-07','05-08','05-09','05-10','05-11'], axisLabel:{ color:'#909399',fontSize:11 } },
+        xAxis:{ type:'category', data: d.dates || [], axisLabel:{ color:'#909399',fontSize:11 } },
         yAxis:[
           { type:'value', min:0, max:100, splitLine:{ lineStyle:{ color:'#F0F4FF' } }, axisLabel:{ color:'#909399',fontSize:10 } },
           { type:'value', min:0, max:10, splitLine:{ show:false }, axisLabel:{ color:'#909399',fontSize:10 } }
         ],
         series:[
-          { name:'平均分', type:'line', data:[62,55,70,48,58,72,65], smooth:true, showSymbol:true, symbolSize:6,
+          { name:'平均分', type:'line', data: d.avgScores || [], smooth:true, showSymbol:true, symbolSize:6,
             lineStyle:{ color:'#409EFF', width:2.5 },
             areaStyle:{ color:new echarts.graphic.LinearGradient(0,0,0,1,[
               { offset:0, color:'rgba(64,158,255,0.3)' }, { offset:1, color:'rgba(64,158,255,0.02)' }
             ])},
             itemStyle:{ color:'#409EFF' }
           },
-          { name:'高危人数', type:'line', yAxisIndex:1, data:[2,1,3,2,4,1,2], smooth:true, showSymbol:true, symbolSize:5,
+          { name:'高危人数', type:'line', yAxisIndex:1, data: d.highRiskCounts || [], smooth:true, showSymbol:true, symbolSize:5,
             lineStyle:{ color:'#F56C6C', width:2 },
             itemStyle:{ color:'#F56C6C' }
           }
@@ -263,20 +301,32 @@ export default {
     },
     initPieChart() {
       const el = this.$refs.pieChart
-      if(!el)return; this.pieChart = echarts.init(el)
+      if(!el)return
+      if (!this.pieChart) this.pieChart = echarts.init(el)
+      const colorMap = { '开心':'#409EFF','平静':'#67C23A','焦虑':'#E6A23C','难过':'#F56C6C','愤怒':'#fa541c','疲惫':'#909399' }
+      const raw = this.moodDistribution || []
+      let pieData = raw.map(item => ({
+        name: item.name,
+        value: item.value,
+        itemStyle: { color: colorMap[item.name] || '#909399' }
+      }))
+      // 无数据时展示占位
+      if (pieData.length === 0) {
+        pieData = [
+          { name:'开心', value:0, itemStyle:{ color:'#409EFF' } },
+          { name:'平静', value:0, itemStyle:{ color:'#67C23A' } },
+          { name:'焦虑', value:0, itemStyle:{ color:'#E6A23C' } },
+          { name:'难过', value:0, itemStyle:{ color:'#F56C6C' } },
+          { name:'愤怒', value:0, itemStyle:{ color:'#fa541c' } }
+        ]
+      }
       this.pieChart.setOption({
         tooltip:{ trigger:'item', formatter:'{b}: {c}' },
         series:[{
           type:'pie', radius:['38%','65%'], center:['50%','50%'],
           padAngle:2, itemStyle:{ borderRadius:6, borderColor:'#fff', borderWidth:2 },
           label:{ show:true, color:'#606266', fontSize:11 },
-          data:[
-            { name:'开心', value:45, itemStyle:{ color:'#409EFF' } },
-            { name:'平静', value:32, itemStyle:{ color:'#67C23A' } },
-            { name:'焦虑', value:12, itemStyle:{ color:'#E6A23C' } },
-            { name:'难过', value:8, itemStyle:{ color:'#F56C6C' } },
-            { name:'愤怒', value:3, itemStyle:{ color:'#fa541c' } }
-          ]
+          data: pieData
         }]
       })
     },

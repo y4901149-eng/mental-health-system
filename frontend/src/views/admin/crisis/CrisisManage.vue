@@ -206,18 +206,15 @@
 </template>
 
 <script>
-import { handleCrisis, deleteCrisis } from '@/api/crisis'
-import request from '@/utils/request'
+import { getCrisisList, handleCrisis, deleteCrisis, notifyGuardian } from '@/api/crisis'
 import { extractKeyword, alertLevelText, alertLevelType } from '@/utils/crisisKeywords'
-
-const nowISO = () => new Date().toISOString()
 
 export default {
   name: 'CrisisManage',
   data() {
     return {
       list:[], total:0, pageNum:1, pageSize:10, loading:false,
-      filters:{ keyword:'', level:'', status:'' },
+      filters:{ keyword:'', level:'', status:'', userId:null },
       dateRange:null,
       statCards:[
         { icon:'⏳', label:'待处理', value:0, bg:'#FFF1F0' },
@@ -231,18 +228,26 @@ export default {
       notifyForm:{ method:'电话', time:null, remark:'' }
     }
   },
-  created(){this.fetchList()},
+  created(){
+    const q = this.$route.query
+    if (q.userId) this.filters.userId = parseInt(q.userId)
+    this.fetchList()
+  },
+  watch: {
+    '$route.query.userId': function() { this.filters.userId = parseInt(this.$route.query.userId); this.search() }
+  },
   methods: {
     fetchList(){
       this.loading=true
       const p={pageNum:this.pageNum,pageSize:this.pageSize}
+      if(this.filters.userId)p.userId=this.filters.userId
       if(this.filters.keyword)p.keyword=this.filters.keyword
       if(this.filters.status)p.status=this.filters.status
       if(this.dateRange){
         p.startDate=this.dateRange[0].toISOString().substring(0,10)
         p.endDate=this.dateRange[1].toISOString().substring(0,10)
       }
-      request.get('/crisis/list',{params:p}).then(resp=>{
+      getCrisisList(p).then(resp=>{
         // resp = {code, message, data: {records, total, ...}}
         // 兼容 axios 响应和直接 JSON 两种结构
         const body = resp && resp.data ? resp : { data: resp }
@@ -284,7 +289,7 @@ export default {
       }).finally(()=>{this.loading=false})
     },
     search(){this.pageNum=1;this.fetchList()},
-    resetSearch(){this.filters={keyword:'',level:'',status:''};this.dateRange=null;this.pageNum=1;this.fetchList()},
+    resetSearch(){this.filters={keyword:'',level:'',status:'',userId:null};this.dateRange=null;this.pageNum=1;this.fetchList()},
     getKeyword(s){return extractKeyword(s)},
     alertLevel(l){return alertLevelText(l)},
     alertType(l){return alertLevelType(l)},
@@ -303,7 +308,7 @@ export default {
       this.notifying=true
       const body={ id:this.currentAlert.id, notifyMethod:this.notifyForm.method, notifyRemark:this.notifyForm.remark }
       if (this.notifyForm.time) body.notifyTime = new Date(this.notifyForm.time).toISOString()
-      request.post('/crisis/notify', body).then(()=>{
+      notifyGuardian(body).then(()=>{
         this.$message.success('已标记通知监护人')
         this.notifyVisible=false
         this.fetchList()

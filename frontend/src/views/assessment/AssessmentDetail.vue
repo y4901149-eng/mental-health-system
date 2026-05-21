@@ -99,7 +99,14 @@ export default {
         answers: this.answers
       }).then(res => {
         this.$message.success('评估完成！')
-        this.$router.push('/assessment/result/' + res.data.id)
+        const recordId = res.data && (res.data.id || res.data.recordId)
+        if (recordId) {
+          this.$router.push('/assessment/result/' + recordId)
+        } else {
+          this.$router.push('/assessment')
+        }
+      }).catch(() => {
+        this.$message.error('提交失败，请重试')
       }).finally(() => {
         this.submitting = false
       })
