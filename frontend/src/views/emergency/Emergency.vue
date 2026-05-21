@@ -296,6 +296,7 @@ export default {
   max-width: 1180px;
   margin: 0 auto;
   padding: 0 24px 36px;
+  color: #24364b;
 }
 
 .emergency-hero {
@@ -303,8 +304,13 @@ export default {
   justify-content: space-between;
   align-items: center;
   gap: 18px;
-  padding: 24px 0 18px;
-  border-bottom: 1px solid #e7edf6;
+  padding: 24px;
+  border: 1px solid rgba(255, 214, 204, 0.9);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(245, 108, 108, 0.1) 0%, rgba(64, 158, 255, 0.05) 100%),
+    #fff;
+  box-shadow: 0 14px 34px rgba(120, 55, 55, 0.08);
   margin-bottom: 18px;
 }
 
@@ -324,7 +330,8 @@ export default {
 }
 
 .emergency-hero h2 {
-  font-size: 26px;
+  font-size: 28px;
+  letter-spacing: 0;
 }
 
 .hero-copy {
@@ -338,9 +345,10 @@ export default {
   gap: 16px;
   padding: 18px 20px;
   margin-bottom: 18px;
-  background: #fff7f5;
+  background: linear-gradient(135deg, #fff7f5 0%, #fff 100%);
   border: 1px solid #ffd6cc;
-  border-radius: 8px;
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(245, 108, 108, 0.1);
 }
 
 .default-mark {
@@ -386,9 +394,15 @@ export default {
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 999px;
   background: #fff;
   border: 1px solid #ffd6cc;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+
+.phone-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(245, 108, 108, 0.12);
 }
 
 .safety-guide {
@@ -401,10 +415,17 @@ export default {
 .guide-item {
   display: flex;
   gap: 10px;
-  padding: 14px;
+  padding: 15px;
   background: #fff;
-  border: 1px solid #e7edf6;
-  border-radius: 8px;
+  border: 1px solid rgba(231, 237, 246, 0.95);
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(41, 80, 130, 0.06);
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+
+.guide-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(41, 80, 130, 0.08);
 }
 
 .guide-item span {
@@ -434,11 +455,12 @@ export default {
 
 .contact-section,
 .hotline-panel {
-  background: #fff;
-  border: 1px solid #e7edf6;
-  border-radius: 8px;
-  padding: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(231, 237, 246, 0.95);
+  border-radius: 16px;
+  padding: 20px;
   margin-bottom: 18px;
+  box-shadow: 0 14px 32px rgba(41, 80, 130, 0.08);
 }
 
 .section-header {
@@ -458,16 +480,23 @@ export default {
 
 .contact-card {
   position: relative;
-  padding: 18px 16px 14px;
-  border: 1px solid #e7edf6;
-  border-radius: 8px;
+  padding: 20px 16px 15px;
+  border: 1px solid rgba(231, 237, 246, 0.95);
+  border-radius: 16px;
   text-align: center;
-  background: #fbfdff;
+  background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+}
+
+.contact-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(41, 80, 130, 0.1);
+  border-color: #d6e6f8;
 }
 
 .contact-card.is-default {
   border-color: #f56c6c;
-  background: #fffafa;
+  background: linear-gradient(180deg, #fff 0%, #fff7f5 100%);
 }
 
 .card-badge {
@@ -477,7 +506,7 @@ export default {
   padding: 3px 12px;
   color: #fff;
   background: #f56c6c;
-  border-radius: 0 8px 0 8px;
+  border-radius: 0 16px 0 12px;
   font-size: 12px;
 }
 
@@ -543,11 +572,23 @@ export default {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
-  background: #fff7f5;
+  padding: 13px 14px;
+  background: linear-gradient(180deg, #fff 0%, #fff7f5 100%);
   border: 1px solid #ffd6cc;
-  border-radius: 8px;
+  border-radius: 14px;
   text-decoration: none;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+
+.hotline-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(245, 108, 108, 0.1);
+}
+
+.emergency-page :deep(.el-input__inner) {
+  border-radius: 12px;
+  border-color: #dbe8f8;
+  background: #fbfdff;
 }
 
 .hotline-item span {

@@ -279,7 +279,9 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #EAF3FF 0%, #F0F5FF 50%, #EDF0FF 100%);
+  background:
+    linear-gradient(135deg, rgba(64, 158, 255, 0.11) 0%, rgba(103, 194, 58, 0.08) 100%),
+    #f4f8fb;
   position: relative;
   overflow: hidden;
 }
@@ -289,11 +291,15 @@ export default {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.42;
 }
 
 .circle {
-  position: absolute;
-  border-radius: 50%;
+  display: none;
 }
 
 .c1 {
@@ -323,9 +329,10 @@ export default {
 /* ===== 主容器 ===== */
 .login-wrapper {
   display: flex;
-  background: #FFFFFF;
-  border-radius: 16px;
-  box-shadow: 0 8px 40px rgba(64, 158, 255, 0.10);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(219, 232, 248, 0.95);
+  border-radius: 22px;
+  box-shadow: 0 24px 64px rgba(41, 80, 130, 0.16);
   overflow: hidden;
   width: 880px;
   max-width: 94vw;
@@ -337,11 +344,22 @@ export default {
 /* ===== 左侧品牌区 ===== */
 .brand-panel {
   width: 400px;
-  background: linear-gradient(135deg, #409EFF 0%, #6C63FF 100%);
+  background:
+    linear-gradient(145deg, rgba(40, 125, 218, 0.94) 0%, rgba(48, 152, 160, 0.92) 100%),
+    #2678d9;
   padding: 48px 40px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  position: relative;
+}
+
+.brand-panel::after {
+  content: "";
+  position: absolute;
+  inset: auto 32px 32px 32px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .brand-content {
@@ -349,7 +367,15 @@ export default {
 }
 
 .brand-icon {
-  font-size: 48px;
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
   margin-bottom: 16px;
 }
 
@@ -378,6 +404,7 @@ export default {
   gap: 10px;
   font-size: 14px;
   opacity: 0.9;
+  padding: 9px 0;
 }
 
 .bf-icon {
@@ -408,9 +435,9 @@ export default {
 }
 
 .form-header h2 {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
-  color: #2C3E50;
+  color: #24364b;
   margin-bottom: 6px;
 }
 
@@ -432,6 +459,15 @@ export default {
 .login-form :deep(.el-input__inner) {
   height: 46px !important;
   font-size: 14px;
+  border-radius: 12px;
+  border-color: #dbe8f8;
+  background: #fbfdff;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.login-form :deep(.el-input__inner:focus) {
+  border-color: #409eff;
+  box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.12);
 }
 
 .login-options {
@@ -447,8 +483,9 @@ export default {
   height: 46px !important;
   font-size: 16px !important;
   font-weight: 600 !important;
-  letter-spacing: 2px;
+  letter-spacing: 0;
   border-radius: 12px !important;
+  box-shadow: 0 12px 24px rgba(64, 158, 255, 0.2);
 }
 
 .switch-mode {

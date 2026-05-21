@@ -354,15 +354,23 @@ export default {
   max-width: 1180px;
   margin: 0 auto;
   padding: 0 24px 32px;
+  color: #24364b;
 }
 
 .appointment-hero {
   display: flex;
   justify-content: space-between;
   gap: 24px;
-  padding: 22px 0 18px;
-  border-bottom: 1px solid #e7edf6;
+  align-items: center;
+  padding: 24px 24px;
+  border: 1px solid rgba(219, 232, 248, 0.95);
+  border-radius: 16px;
+  margin-top: 4px;
   margin-bottom: 20px;
+  background:
+    linear-gradient(135deg, rgba(64, 158, 255, 0.1) 0%, rgba(103, 194, 58, 0.06) 100%),
+    #fff;
+  box-shadow: 0 14px 34px rgba(41, 80, 130, 0.08);
 }
 
 .eyebrow {
@@ -378,7 +386,8 @@ export default {
 }
 
 .appointment-hero h2 {
-  font-size: 26px;
+  font-size: 28px;
+  letter-spacing: 0;
 }
 
 .hero-copy {
@@ -394,10 +403,11 @@ export default {
 
 .hero-stats div {
   min-width: 96px;
-  padding: 12px 14px;
-  border: 1px solid #e7edf6;
-  border-radius: 8px;
-  background: #fff;
+  padding: 13px 15px;
+  border: 1px solid rgba(207, 224, 247, 0.95);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 10px 20px rgba(41, 80, 130, 0.06);
 }
 
 .hero-stats strong {
@@ -417,10 +427,11 @@ export default {
   gap: 18px;
   align-items: center;
   margin-bottom: 18px;
-  padding: 18px;
-  border: 1px solid #dbe8f8;
-  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid rgba(219, 232, 248, 0.95);
+  border-radius: 16px;
   background: linear-gradient(135deg, #f7fbff 0%, #fff 100%);
+  box-shadow: 0 14px 30px rgba(41, 80, 130, 0.07);
 }
 
 .flow-copy h3 {
@@ -444,10 +455,16 @@ export default {
   display: flex;
   gap: 10px;
   min-height: 72px;
-  padding: 12px;
-  border: 1px solid #e7edf6;
-  border-radius: 8px;
+  padding: 13px;
+  border: 1px solid rgba(231, 237, 246, 0.95);
+  border-radius: 14px;
   background: #fff;
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+}
+
+.flow-step:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(41, 80, 130, 0.06);
 }
 
 .flow-step span {
@@ -478,7 +495,7 @@ export default {
 
 .flow-step.active {
   border-color: #409eff;
-  box-shadow: 0 8px 18px rgba(64, 158, 255, 0.12);
+  box-shadow: 0 12px 24px rgba(64, 158, 255, 0.14);
 }
 
 .flow-step.active span {
@@ -503,17 +520,19 @@ export default {
 }
 
 .panel {
-  background: #fff;
-  border: 1px solid #e7edf6;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(231, 237, 246, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 14px 32px rgba(41, 80, 130, 0.08);
+  overflow: hidden;
 }
 
 .form-panel {
-  padding: 20px;
+  padding: 22px;
 }
 
 .list-panel {
-  padding: 18px;
+  padding: 20px;
 }
 
 .panel-header {
@@ -536,7 +555,34 @@ export default {
 
 .submit-btn {
   width: 100%;
-  border-radius: 8px;
+  border-radius: 12px !important;
+  height: 42px;
+  box-shadow: 0 10px 22px rgba(64, 158, 255, 0.18);
+}
+
+.form-panel :deep(.el-input__inner),
+.form-panel :deep(.el-textarea__inner) {
+  border-radius: 12px;
+  border-color: #dbe8f8;
+  background: #fbfdff;
+}
+
+.form-panel :deep(.el-radio-button__inner) {
+  border-color: #dbe8f8;
+}
+
+.list-panel :deep(.el-table) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.list-panel :deep(.el-table th.el-table__cell) {
+  background: #f6f9fd;
+  color: #4f6680;
+}
+
+.list-panel :deep(.el-table td.el-table__cell) {
+  border-bottom-color: #edf2f8;
 }
 
 .time-cell {
