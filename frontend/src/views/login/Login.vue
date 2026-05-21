@@ -58,7 +58,9 @@
               v-model="form.username"
               :placeholder="isLoginMode ? '请输入用户名' : '请设置用户名（3-20位）'"
               prefix-icon="el-icon-user"
+              autocomplete="username"
               size="large"
+              @keyup.enter.native="handleSubmit"
             />
           </el-form-item>
 
@@ -70,7 +72,9 @@
               :placeholder="isLoginMode ? '请输入密码' : '请设置密码（至少6位）'"
               prefix-icon="el-icon-lock"
               show-password
+              :autocomplete="isLoginMode ? 'current-password' : 'new-password'"
               size="large"
+              @keyup.enter.native="handleSubmit"
             />
           </el-form-item>
 
@@ -82,7 +86,9 @@
               placeholder="请再次输入密码"
               prefix-icon="el-icon-lock"
               show-password
+              autocomplete="new-password"
               size="large"
+              @keyup.enter.native="handleSubmit"
             />
           </el-form-item>
 
@@ -93,8 +99,25 @@
               placeholder="请输入昵称（选填）"
               prefix-icon="el-icon-edit"
               size="large"
+              @keyup.enter.native="handleSubmit"
             />
           </el-form-item>
+
+          <!-- 邮箱（注册模式） -->
+          <el-form-item prop="email" v-if="!isLoginMode">
+            <el-input
+              v-model.trim="form.email"
+              placeholder="请输入邮箱（选填）"
+              prefix-icon="el-icon-message"
+              autocomplete="email"
+              size="large"
+              @keyup.enter.native="handleSubmit"
+            />
+          </el-form-item>
+
+          <div v-if="isLoginMode" class="login-options">
+            <el-checkbox v-model="rememberUsername">记住用户名</el-checkbox>
+          </div>
 
           <!-- 提交按钮 -->
           <el-form-item>
@@ -129,6 +152,8 @@
 <script>
 import { register } from '@/api/user'
 
+const REMEMBER_USERNAME_KEY = 'mental_health_remember_username'
+
 export default {
   name: 'Login',
   data() {
@@ -139,8 +164,10 @@ export default {
         username: '',
         password: '',
         confirmPassword: '',
-        nickname: ''
-      }
+        nickname: '',
+        email: ''
+      },
+      rememberUsername: false
     }
   },
 
@@ -171,9 +198,20 @@ export default {
             trigger: 'blur'
           }
         ]
+        baseRules.email = [
+          { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+        ]
       }
 
       return baseRules
+    }
+  },
+
+  created() {
+    const rememberedUsername = localStorage.getItem(REMEMBER_USERNAME_KEY)
+    if (rememberedUsername) {
+      this.form.username = rememberedUsername
+      this.rememberUsername = true
     }
   },
 
@@ -181,6 +219,9 @@ export default {
     switchMode() {
       this.isLoginMode = !this.isLoginMode
       this.$refs.form.resetFields()
+      if (this.isLoginMode && this.rememberUsername) {
+        this.form.username = localStorage.getItem(REMEMBER_USERNAME_KEY) || ''
+      }
     },
 
     handleSubmit() {
@@ -194,6 +235,7 @@ export default {
             username: this.form.username,
             password: this.form.password
           }).then(() => {
+            this.saveRememberedUsername()
             this.$message.success('登录成功！')
             this.$router.push('/home').catch(() => {})
           }).catch(() => {}).finally(() => {
@@ -204,17 +246,27 @@ export default {
             username: this.form.username,
             password: this.form.password,
             confirmPassword: this.form.confirmPassword,
-            nickname: this.form.nickname || undefined
+            nickname: this.form.nickname || undefined,
+            email: this.form.email || undefined
           }).then(() => {
             this.$message.success('注册成功！请登录')
             this.isLoginMode = true
             this.form.password = ''
             this.form.confirmPassword = ''
+            this.form.email = ''
           }).catch(() => {}).finally(() => {
             this.submitting = false
           })
         }
       })
+    },
+
+    saveRememberedUsername() {
+      if (this.rememberUsername) {
+        localStorage.setItem(REMEMBER_USERNAME_KEY, this.form.username.trim())
+      } else {
+        localStorage.removeItem(REMEMBER_USERNAME_KEY)
+      }
     }
   }
 }
@@ -380,6 +432,14 @@ export default {
 .login-form :deep(.el-input__inner) {
   height: 46px !important;
   font-size: 14px;
+}
+
+.login-options {
+  display: flex;
+  justify-content: flex-start;
+  max-width: 360px;
+  margin: -4px auto 14px;
+  color: #7b8ca5;
 }
 
 .submit-btn {

@@ -30,32 +30,30 @@ public class EmergencyContactController {
 
     @PostMapping("/create")
     public ResultVO<?> create(@RequestBody EmergencyContact contact, HttpServletRequest request) {
+        if (contact == null) {
+            return ResultVO.badRequest("联系人信息不能为空");
+        }
         Long userId = (Long) request.getAttribute("userId");
         contact.setUserId(userId);
-        emergencyContactService.save(contact);
+        emergencyContactService.saveContact(contact);
         return ResultVO.success();
     }
 
     @PutMapping("/update")
     public ResultVO<?> update(@RequestBody EmergencyContact contact, HttpServletRequest request) {
-        Long userId = (Long) request.getAttribute("userId");
-        EmergencyContact existing = emergencyContactService.getById(contact.getId());
-        if (existing != null && existing.getUserId().equals(userId)) {
-            existing.setName(contact.getName());
-            existing.setPhone(contact.getPhone());
-            existing.setRelation(contact.getRelation());
-            emergencyContactService.updateById(existing);
+        if (contact == null || contact.getId() == null) {
+            return ResultVO.badRequest("联系人信息不完整");
         }
+        Long userId = (Long) request.getAttribute("userId");
+        contact.setUserId(userId);
+        emergencyContactService.updateContact(contact);
         return ResultVO.success();
     }
 
     @DeleteMapping("/delete/{id}")
     public ResultVO<?> delete(@PathVariable Long id, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
-        EmergencyContact contact = emergencyContactService.getById(id);
-        if (contact != null && contact.getUserId().equals(userId)) {
-            emergencyContactService.removeById(id);
-        }
+        emergencyContactService.deleteContact(userId, id);
         return ResultVO.success();
     }
 

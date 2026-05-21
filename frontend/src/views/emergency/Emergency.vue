@@ -1,153 +1,291 @@
 <!-- 紧急联系人 -->
 <template>
   <div class="emergency-page">
-    <div class="page-header">
-      <div class="header-left">
-        <h1 class="page-title">🆘 紧急联系人</h1>
-        <p class="page-subtitle">设置你的紧急联系人，在需要时一键求助</p>
+    <section class="emergency-hero">
+      <div>
+        <p class="eyebrow">安全支持</p>
+        <h2>紧急联系人</h2>
+        <p class="hero-copy">提前维护可信联系人，在需要支持时更快找到可以求助的人。</p>
       </div>
-      <el-button type="primary" size="medium" @click="showDialog = true; isEdit = false; form = { name: '', phone: '', relation: '' }">
-        <i class="el-icon-plus"></i> 新增联系人
+      <el-button type="primary" icon="el-icon-plus" @click="openCreateDialog">
+        新增联系人
       </el-button>
-    </div>
+    </section>
 
-    <!-- 联系人列表 -->
-    <el-row :gutter="16">
-      <el-col :span="8" v-for="c in contactList" :key="c.id" style="margin-bottom:16px;">
-        <el-card shadow="never" :class="['contact-card', { 'is-default': c.isDefault === 1 }]">
-          <div class="card-badge" v-if="c.isDefault === 1">默认</div>
-          <div class="contact-body">
-            <div class="contact-avatar" :style="{ background: getAvatarColor(c.name) }">
-              {{ c.name.charAt(0) }}
-            </div>
-            <h3 class="contact-name">{{ c.name }}</h3>
-            <div class="contact-phone">
-              <el-tag size="small" type="primary">{{ c.phone }}</el-tag>
-            </div>
-            <div class="contact-relation" v-if="c.relation">
-              <span class="relation-tag">{{ c.relation }}</span>
-            </div>
-            <div class="contact-actions">
-              <el-button v-if="c.isDefault !== 1" type="text" size="mini" @click="setDefault(c.id)">设为默认</el-button>
-              <el-button type="text" size="mini" @click="editContact(c)">编辑</el-button>
-              <el-button type="text" size="mini" style="color:#F56C6C;" @click="handleDelete(c.id)">删除</el-button>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="8" v-if="contactList.length === 0" style="margin-bottom:16px;">
-        <el-card shadow="never">
-          <div style="text-align:center;padding:40px 0;color:#C0C4CC;">
-            <div style="font-size:40px;margin-bottom:12px;">🆘</div>
-            <p>暂无紧急联系人</p>
-            <p style="font-size:13px;margin-top:4px;">添加一个联系人以便在危机时快速求助</p>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <!-- 心理援助热线 -->
-    <el-card shadow="never" class="hotline-card">
-      <div slot="header" class="card-header">
-        <span><i class="el-icon-phone-outline" style="color:#F56C6C;"></i> 心理援助热线（24小时）</span>
+    <section class="default-panel" v-if="defaultContact">
+      <div class="default-mark">默认</div>
+      <div class="default-info">
+        <p class="eyebrow">优先联系</p>
+        <h3>{{ defaultContact.name }}</h3>
+        <span>{{ defaultContact.relation || '未填写关系' }}</span>
       </div>
-      <el-row :gutter="16">
-        <el-col :span="12" v-for="h in hotlines" :key="h.name">
-          <div class="hotline-item">
-            <span class="hotline-name">{{ h.name }}</span>
-            <span class="hotline-num">{{ h.number }}</span>
-          </div>
-        </el-col>
-      </el-row>
-    </el-card>
+      <div class="default-actions">
+        <a class="phone-link" :href="'tel:' + defaultContact.phone">
+          <i class="el-icon-phone"></i>
+          {{ defaultContact.phone }}
+        </a>
+        <el-button size="mini" plain @click="editContact(defaultContact)">编辑</el-button>
+      </div>
+    </section>
 
-    <!-- 编辑/新增对话框 -->
-    <el-dialog :title="isEdit ? '编辑联系人' : '新增联系人'" :visible.sync="showDialog" width="420px" :close-on-click-modal="false">
-      <el-form :model="form" label-position="top" size="medium">
-        <el-form-item label="姓名" required>
-          <el-input v-model="form.name" placeholder="输入联系人姓名" />
+    <section class="safety-guide">
+      <div class="guide-item">
+        <span>1</span>
+        <div>
+          <strong>维护可信联系人</strong>
+          <small>建议至少添加一位能及时响应的家人、朋友或咨询师。</small>
+        </div>
+      </div>
+      <div class="guide-item">
+        <span>2</span>
+        <div>
+          <strong>设置默认联系人</strong>
+          <small>默认联系人会优先展示，紧急时减少查找时间。</small>
+        </div>
+      </div>
+      <div class="guide-item">
+        <span>3</span>
+        <div>
+          <strong>必要时拨打热线</strong>
+          <small>无法联系身边的人时，可以直接使用下方援助热线。</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="contact-section">
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">我的联系人</p>
+          <h3>联系人列表</h3>
+        </div>
+        <el-button plain size="small" icon="el-icon-refresh" :loading="loading" @click="fetchList">
+          刷新
+        </el-button>
+      </div>
+
+      <div v-loading="loading" class="contact-grid">
+        <article
+          v-for="contact in contactList"
+          :key="contact.id"
+          class="contact-card"
+          :class="{ 'is-default': contact.isDefault === 1 }"
+        >
+          <div v-if="contact.isDefault === 1" class="card-badge">默认</div>
+          <div class="contact-avatar" :style="{ background: getAvatarColor(contact.name) }">
+            {{ firstChar(contact.name) }}
+          </div>
+          <h3>{{ contact.name }}</h3>
+          <p>{{ contact.relation || '未填写关系' }}</p>
+          <a class="contact-phone" :href="'tel:' + contact.phone">{{ contact.phone }}</a>
+          <div class="contact-actions">
+            <el-button v-if="contact.isDefault !== 1" type="text" size="mini" @click="setDefault(contact.id)">
+              设为默认
+            </el-button>
+            <el-button type="text" size="mini" @click="editContact(contact)">编辑</el-button>
+            <el-button type="text" size="mini" class="danger-text" @click="handleDelete(contact)">删除</el-button>
+          </div>
+        </article>
+
+        <div v-if="!loading && contactList.length === 0" class="empty-card">
+          <div class="empty-icon">SOS</div>
+          <h3>还没有紧急联系人</h3>
+          <p>添加一位家人、朋友或咨询师，方便在需要时快速求助。</p>
+          <el-button type="primary" size="small" @click="openCreateDialog">添加联系人</el-button>
+        </div>
+      </div>
+    </section>
+
+    <section class="hotline-panel">
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">24 小时支持</p>
+          <h3>心理援助热线</h3>
+        </div>
+      </div>
+      <div class="hotline-grid">
+        <a v-for="hotline in hotlines" :key="hotline.name" class="hotline-item" :href="'tel:' + hotline.number">
+          <span>{{ hotline.name }}</span>
+          <strong>{{ hotline.number }}</strong>
+        </a>
+      </div>
+    </section>
+
+    <el-dialog
+      :title="isEdit ? '编辑联系人' : '新增联系人'"
+      :visible.sync="showDialog"
+      width="430px"
+      :close-on-click-modal="false"
+      @closed="resetForm"
+    >
+      <el-form ref="form" :model="form" :rules="rules" label-position="top" size="medium">
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model.trim="form.name" placeholder="请输入联系人姓名" />
         </el-form-item>
-        <el-form-item label="手机号" required>
-          <el-input v-model="form.phone" placeholder="输入手机号" />
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model.trim="form.phone" placeholder="请输入手机号" />
         </el-form-item>
-        <el-form-item label="关系">
-          <el-select v-model="form.relation" placeholder="选择或输入关系" style="width:100%;" allow-create filterable>
-            <el-option label="家人" value="家人" />
-            <el-option label="朋友" value="朋友" />
-            <el-option label="同事" value="同事" />
-            <el-option label="同学" value="同学" />
-            <el-option label="医生" value="医生" />
-            <el-option label="咨询师" value="咨询师" />
+        <el-form-item label="关系" prop="relation">
+          <el-select v-model="form.relation" placeholder="选择或输入关系" style="width: 100%;" allow-create filterable>
+            <el-option v-for="relation in relationOptions" :key="relation" :label="relation" :value="relation" />
           </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-checkbox v-model="form.isDefault" :disabled="isEditingDefault">
+            {{ isEditingDefault ? '当前默认联系人' : '设为默认联系人' }}
+          </el-checkbox>
+          <p v-if="isEditingDefault" class="form-tip">如需更换默认联系人，请在其他联系人卡片中点击“设为默认”。</p>
         </el-form-item>
       </el-form>
       <div slot="footer">
         <el-button @click="showDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitForm" :loading="submitting">{{ isEdit ? '保存修改' : '添加' }}</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitForm">
+          {{ isEdit ? '保存修改' : '添加联系人' }}
+        </el-button>
       </div>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import { getEmergencyList, createEmergency, updateEmergency, deleteEmergency, setDefaultEmergency } from '@/api/emergency'
+import {
+  getEmergencyList,
+  createEmergency,
+  updateEmergency,
+  deleteEmergency,
+  setDefaultEmergency
+} from '@/api/emergency'
 
-const avatarColors = ['#409EFF','#6C63FF','#67C23A','#E6A23C','#F56C6C','#A78BFA','#FF6B9D','#4FC3F7']
+const avatarColors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#8E7CF6', '#13C2C2']
 
 export default {
   name: 'Emergency',
   data() {
     return {
       contactList: [],
+      defaultContact: null,
       showDialog: false,
       isEdit: false,
       submitting: false,
-      form: { name: '', phone: '', relation: '' },
+      loading: false,
       editingId: null,
+      form: this.emptyForm(),
+      relationOptions: ['家人', '朋友', '同学', '同事', '医生', '咨询师'],
       hotlines: [
         { name: '全国心理援助热线', number: '12356' },
-        { name: '生命热线', number: '400-821-1215' }
-      ]
+        { name: '生命热线', number: '400-821-1215' },
+        { name: '北京心理危机干预热线', number: '800-810-1117' },
+        { name: '上海心理援助热线', number: '021-962525' }
+      ],
+      rules: {
+        name: [{ required: true, message: '请输入联系人姓名', trigger: 'blur' }],
+        phone: [
+          { required: true, message: '请输入手机号', trigger: 'blur' },
+          { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的 11 位手机号', trigger: 'blur' }
+        ]
+      }
     }
   },
-  created() { this.fetchList() },
+  computed: {
+    isEditingDefault() {
+      return this.isEdit && this.form.isDefault
+    }
+  },
+  created() {
+    this.fetchList()
+  },
   methods: {
-    fetchList() {
-      getEmergencyList().then(res => { this.contactList = res.data || [] })
+    emptyForm() {
+      return { name: '', phone: '', relation: '', isDefault: false }
     },
-    editContact(c) {
-      this.isEdit = true
-      this.editingId = c.id
-      this.form = { name: c.name, phone: c.phone, relation: c.relation || '' }
+
+    fetchList() {
+      this.loading = true
+      return getEmergencyList()
+        .then(listRes => {
+          this.contactList = listRes.data || []
+          this.defaultContact = this.contactList.find(contact => contact.isDefault === 1) || null
+        })
+        .finally(() => {
+          this.loading = false
+        })
+    },
+
+    openCreateDialog() {
+      this.isEdit = false
+      this.editingId = null
+      this.form = this.emptyForm()
       this.showDialog = true
     },
-    setDefault(id) {
-      setDefaultEmergency(id).then(() => { this.$message.success('已设为默认'); this.fetchList() })
+
+    editContact(contact) {
+      this.isEdit = true
+      this.editingId = contact.id
+      this.form = {
+        name: contact.name,
+        phone: contact.phone,
+        relation: contact.relation || '',
+        isDefault: contact.isDefault === 1
+      }
+      this.showDialog = true
     },
-    handleDelete(id) {
-      this.$confirm('确定删除此联系人？', '提示').then(() => {
-        deleteEmergency(id).then(() => { this.$message.success('已删除'); this.fetchList() })
+
+    submitForm() {
+      this.$refs.form.validate(valid => {
+        if (!valid || this.submitting) return
+        this.submitting = true
+        const payload = {
+          id: this.editingId,
+          name: this.form.name,
+          phone: this.form.phone,
+          relation: this.form.relation,
+          isDefault: this.form.isDefault ? 1 : 0
+        }
+        const action = this.isEdit ? updateEmergency(payload) : createEmergency(payload)
+        action
+          .then(() => {
+            this.$message.success(this.isEdit ? '联系人已更新。' : '联系人已添加。')
+            this.showDialog = false
+            this.fetchList()
+          })
+          .finally(() => {
+            this.submitting = false
+          })
+      })
+    },
+
+    setDefault(id) {
+      setDefaultEmergency(id).then(() => {
+        this.$message.success('已设为默认联系人。')
+        this.fetchList()
+      })
+    },
+
+    handleDelete(contact) {
+      this.$confirm('确定删除联系人“' + contact.name + '”吗？', '删除联系人', {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        deleteEmergency(contact.id).then(() => {
+          this.$message.success('联系人已删除。')
+          this.fetchList()
+        })
       }).catch(() => {})
     },
-    submitForm() {
-      if (!this.form.name || !this.form.phone) {
-        this.$message.warning('请填写姓名和手机号')
-        return
-      }
-      this.submitting = true
-      const action = this.isEdit
-        ? updateEmergency({ id: this.editingId, ...this.form })
-        : createEmergency(this.form)
-      action.then(() => {
-        this.$message.success(this.isEdit ? '已更新' : '已添加')
-        this.showDialog = false
-        this.fetchList()
-      }).finally(() => { this.submitting = false })
+
+    resetForm() {
+      this.form = this.emptyForm()
+      this.editingId = null
+      this.$nextTick(() => this.$refs.form && this.$refs.form.clearValidate())
     },
+
+    firstChar(name) {
+      return name ? name.charAt(0) : '联'
+    },
+
     getAvatarColor(name) {
       if (!name) return avatarColors[0]
-      const idx = name.charCodeAt(0) % avatarColors.length
-      return avatarColors[idx]
+      return avatarColors[name.charCodeAt(0) % avatarColors.length]
     }
   }
 }
@@ -155,40 +293,291 @@ export default {
 
 <style scoped>
 .emergency-page {
-  max-width: var(--page-width, 1200px); margin: 0 auto; padding: 0 24px 40px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px 36px;
 }
-.page-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 24px; padding-top: 28px;
+
+.emergency-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 24px 0 18px;
+  border-bottom: 1px solid #e7edf6;
+  margin-bottom: 18px;
 }
-.page-title { font-size: 22px; font-weight: 700; color: #2C3E50; }
-.page-subtitle { font-size: 14px; color: #909399; margin-top: 4px; }
-.contact-card { position: relative; text-align: center; padding-top: 8px; transition: all 0.3s ease; }
-.contact-card.is-default { border-color: #409EFF !important; background: #FAFCFF; }
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: #7b8ca5;
+  font-size: 12px;
+}
+
+.emergency-hero h2,
+.section-header h3,
+.default-info h3,
+.contact-card h3,
+.empty-card h3 {
+  margin: 0;
+  color: #24364b;
+}
+
+.emergency-hero h2 {
+  font-size: 26px;
+}
+
+.hero-copy {
+  margin: 8px 0 0;
+  color: #6d7d93;
+}
+
+.default-panel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  background: #fff7f5;
+  border: 1px solid #ffd6cc;
+  border-radius: 8px;
+}
+
+.default-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f56c6c;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.default-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.default-info span {
+  color: #7b8ca5;
+  font-size: 13px;
+}
+
+.phone-link,
+.contact-phone {
+  color: #f56c6c;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.default-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.phone-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #ffd6cc;
+}
+
+.safety-guide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.guide-item {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #e7edf6;
+  border-radius: 8px;
+}
+
+.guide-item span {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #f56c6c;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.guide-item strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #24364b;
+}
+
+.guide-item small {
+  color: #7b8ca5;
+  line-height: 1.5;
+}
+
+.contact-section,
+.hotline-panel {
+  background: #fff;
+  border: 1px solid #e7edf6;
+  border-radius: 8px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.contact-grid {
+  min-height: 160px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.contact-card {
+  position: relative;
+  padding: 18px 16px 14px;
+  border: 1px solid #e7edf6;
+  border-radius: 8px;
+  text-align: center;
+  background: #fbfdff;
+}
+
+.contact-card.is-default {
+  border-color: #f56c6c;
+  background: #fffafa;
+}
+
 .card-badge {
-  position: absolute; top: 0; right: 0;
-  background: #409EFF; color: #fff; font-size: 11px;
-  padding: 2px 12px; border-radius: 0 12px 0 12px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 3px 12px;
+  color: #fff;
+  background: #f56c6c;
+  border-radius: 0 8px 0 8px;
+  font-size: 12px;
 }
-.contact-body { padding: 8px 0; }
+
 .contact-avatar {
-  width: 56px; height: 56px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; font-weight: 700; color: #fff;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin: 0 auto 10px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
 }
-.contact-name { font-size: 16px; font-weight: 700; color: #2C3E50; margin: 0 0 8px; }
-.contact-phone { margin-bottom: 6px; }
-.contact-relation { margin-bottom: 12px; }
-.relation-tag { font-size: 12px; color: #909399; background: #F0F5FF; padding: 2px 10px; border-radius: 10px; }
-.contact-actions { display: flex; justify-content: center; gap: 4px; border-top: 1px solid #F0F5FF; padding-top: 10px; }
-.hotline-card { margin-top: 8px; }
-.card-header { font-weight: 600; font-size: 15px; color: #2C3E50; }
-.card-header i { margin-right: 6px; }
+
+.contact-card p {
+  margin: 6px 0 8px;
+  color: #7b8ca5;
+  font-size: 13px;
+}
+
+.contact-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e7edf6;
+}
+
+.danger-text {
+  color: #f56c6c;
+}
+
+.empty-card {
+  grid-column: 1 / -1;
+  padding: 34px 16px;
+  text-align: center;
+  color: #7b8ca5;
+}
+
+.empty-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: #fff2f0;
+  color: #f56c6c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.hotline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
 .hotline-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 14px; background: #FFF5F5; border-radius: 10px; margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #fff7f5;
+  border: 1px solid #ffd6cc;
+  border-radius: 8px;
+  text-decoration: none;
 }
-.hotline-name { font-size: 14px; color: #606266; }
-.hotline-num { font-size: 16px; font-weight: 700; color: #F56C6C; letter-spacing: 0.5px; }
+
+.hotline-item span {
+  color: #5f6f84;
+}
+
+.hotline-item strong {
+  color: #f56c6c;
+}
+
+.form-tip {
+  margin: 6px 0 0;
+  color: #8a98aa;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .emergency-hero,
+  .default-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .default-actions {
+    justify-content: flex-start;
+  }
+
+  .safety-guide {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

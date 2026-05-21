@@ -19,6 +19,30 @@
       </div>
     </section>
 
+    <section class="flow-panel">
+      <div class="flow-copy">
+        <p class="eyebrow">处理进度</p>
+        <h3>{{ nextAppointment ? '最近预约正在跟进' : '提交后由负责人确认' }}</h3>
+        <p>
+          {{ nextAppointment ? appointmentHint(nextAppointment) : '预约提交后会进入待确认状态，咨询负责人确认后状态会更新为已确认。' }}
+        </p>
+      </div>
+      <div class="flow-steps">
+        <div
+          v-for="step in flowSteps"
+          :key="step.key"
+          class="flow-step"
+          :class="{ active: step.active, done: step.done }"
+        >
+          <span>{{ step.index }}</span>
+          <div>
+            <strong>{{ step.title }}</strong>
+            <small>{{ step.desc }}</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="appointment-layout">
       <div class="panel form-panel">
         <div class="panel-header">
@@ -186,6 +210,40 @@ export default {
   computed: {
     activeCount() {
       return this.appointments.filter(item => ['pending', 'confirmed'].includes(item.status)).length
+    },
+
+    nextAppointment() {
+      return this.appointments.find(item => ['pending', 'confirmed'].includes(item.status)) || null
+    },
+
+    flowSteps() {
+      const status = this.nextAppointment ? this.nextAppointment.status : ''
+      return [
+        {
+          key: 'submitted',
+          index: '1',
+          title: '提交预约',
+          desc: this.nextAppointment ? '已收到预约信息' : '填写信息后提交',
+          active: !status,
+          done: !!status
+        },
+        {
+          key: 'confirm',
+          index: '2',
+          title: '负责人确认',
+          desc: status === 'confirmed' ? '已确认时间安排' : '等待负责人处理',
+          active: status === 'pending',
+          done: status === 'confirmed'
+        },
+        {
+          key: 'consult',
+          index: '3',
+          title: '按时咨询',
+          desc: status === 'confirmed' ? '请按预约时间参加' : '确认后进入咨询',
+          active: status === 'confirmed',
+          done: false
+        }
+      ]
     }
   },
   created() {
@@ -278,6 +336,14 @@ export default {
 
     formatSlot(slot) {
       return slot ? slot.replace('-', ' - ') : ''
+    },
+
+    appointmentHint(appointment) {
+      const timeText = appointment.appointmentDate + ' ' + this.formatSlot(appointment.timeSlot)
+      if (appointment.status === 'confirmed') {
+        return appointment.counselorName + ' 已确认 ' + timeText + ' 的预约，请按时参加。'
+      }
+      return appointment.counselorName + ' 的 ' + timeText + ' 预约已提交，请等待负责人确认。'
     }
   }
 }
@@ -343,6 +409,90 @@ export default {
 .hero-stats span {
   color: #7b8ca5;
   font-size: 12px;
+}
+
+.flow-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(360px, 1.35fr);
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid #dbe8f8;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f7fbff 0%, #fff 100%);
+}
+
+.flow-copy h3 {
+  margin: 0;
+  color: #24364b;
+}
+
+.flow-copy p:last-child {
+  margin: 8px 0 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.flow-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.flow-step {
+  display: flex;
+  gap: 10px;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid #e7edf6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.flow-step span {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #edf2f8;
+  color: #6b7c93;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.flow-step strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #2f4057;
+  font-size: 14px;
+}
+
+.flow-step small {
+  color: #7b8ca5;
+  line-height: 1.45;
+}
+
+.flow-step.active {
+  border-color: #409eff;
+  box-shadow: 0 8px 18px rgba(64, 158, 255, 0.12);
+}
+
+.flow-step.active span {
+  background: #409eff;
+  color: #fff;
+}
+
+.flow-step.done {
+  border-color: #c7ead7;
+}
+
+.flow-step.done span {
+  background: #67c23a;
+  color: #fff;
 }
 
 .appointment-layout {
@@ -414,6 +564,14 @@ export default {
   }
 
   .appointment-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .flow-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .flow-steps {
     grid-template-columns: 1fr;
   }
 }
