@@ -20,7 +20,7 @@ public class MoodRecordController {
     @Autowired
     private MoodRecordService moodRecordService;
 
-    /** 记录今日情绪 */
+    /** 记录一次情绪 */
     @PostMapping("/record")
     public ResultVO<?> record(@RequestBody MoodRecord moodRecord, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
@@ -29,11 +29,11 @@ public class MoodRecordController {
         return ResultVO.success();
     }
 
-    /** 获取今日情绪记录 */
+    /** 获取今日情绪统计和记录列表 */
     @GetMapping("/today")
-    public ResultVO<MoodRecord> today(HttpServletRequest request) {
+    public ResultVO<Map<String, Object>> today(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
-        return ResultVO.success(moodRecordService.getTodayRecord(userId));
+        return ResultVO.success(moodRecordService.getTodayOverview(userId));
     }
 
     /** 获取情绪趋势（支持天数筛选） */
@@ -61,5 +61,14 @@ public class MoodRecordController {
             HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         return ResultVO.success(moodRecordService.getMoodSummary(userId, days));
+    }
+
+    /** 获取最近一段时间的情绪记录 */
+    @GetMapping("/records")
+    public ResultVO<List<MoodRecord>> records(
+            @RequestParam(defaultValue = "30") Integer days,
+            HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("userId");
+        return ResultVO.success(moodRecordService.getMoodRecords(userId, days));
     }
 }

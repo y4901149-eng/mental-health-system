@@ -3,7 +3,7 @@
     <section class="module-header">
       <div>
         <h1>情绪分析中心</h1>
-        <p>基于每日情绪记录展示趋势、分布和基础统计。</p>
+        <p>基于情绪记录生成趋势和分布，仅供自我观察。</p>
       </div>
       <el-button type="primary" @click="$router.push('/mood')">
         <i class="el-icon-edit"></i>
@@ -43,8 +43,10 @@
       <el-col :xs="24" :md="15">
         <el-card shadow="never" class="panel-card" v-loading="loading">
           <div slot="header" class="panel-header">
-            <strong>情绪趋势</strong>
-            <span>分数范围 1-10</span>
+            <div>
+              <strong>情绪趋势</strong>
+              <span>同一天多条记录按平均分显示</span>
+            </div>
           </div>
           <div class="chart-shell">
             <div ref="lineChart" class="chart-box"></div>
@@ -62,8 +64,10 @@
       <el-col :xs="24" :md="9">
         <el-card shadow="never" class="panel-card" v-loading="loading">
           <div slot="header" class="panel-header">
-            <strong>情绪分布</strong>
-            <span>按情绪类型统计</span>
+            <div>
+              <strong>情绪分布</strong>
+              <span>统计范围内所有记录</span>
+            </div>
           </div>
           <div class="chart-shell">
             <div ref="pieChart" class="chart-box"></div>
@@ -78,15 +82,54 @@
       </el-col>
     </el-row>
 
+    <el-card shadow="never" class="records-card" v-loading="recordsLoading">
+      <div slot="header" class="panel-header">
+        <div>
+          <strong>最近 30 天情绪记录与备注</strong>
+          <span>按日期分组，最新记录在前</span>
+        </div>
+        <el-button plain size="small" @click="$router.push('/mood')">
+          记录情绪
+        </el-button>
+      </div>
+
+      <div v-if="recordGroups.length" class="record-groups">
+        <section v-for="group in recordGroups" :key="group.date" class="day-group">
+          <div class="day-title">
+            <strong>{{ group.date }}</strong>
+            <span>{{ group.records.length }} 条</span>
+          </div>
+          <div class="record-list">
+            <div v-for="record in group.records" :key="record.id || record.createTime" class="record-item">
+              <div class="record-time">{{ record.time || '--:--' }}</div>
+              <div class="record-body">
+                <div class="record-meta">
+                  <strong>{{ getMoodLabel(record.moodTag) }}</strong>
+                  <span>{{ formatScore(record.moodScore) }} 分</span>
+                </div>
+                <p>{{ formatNote(record.note) }}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <el-empty
+        v-else
+        description="最近 30 天暂无情绪记录，可以先完成一次情绪记录。"
+        :image-size="96">
+      </el-empty>
+    </el-card>
+
     <el-card shadow="never" class="insight-card">
-      <div class="insight-title">情绪洞察</div>
+      <div class="insight-title">情绪观察</div>
       <p>{{ insightText }}</p>
     </el-card>
   </div>
 </template>
 
 <script>
-import { getMoodTrend, getMoodDistribution, getMoodSummary } from '@/api/mood'
+import { getMoodTrend, getMoodDistribution, getMoodSummary, getMoodRecords } from '@/api/mood'
 import * as echarts from 'echarts'
 
 const moodTagMap = {
@@ -104,10 +147,13 @@ export default {
     return {
       activeDays: 30,
       loading: false,
+      recordsLoading: false,
       error: '',
+      recordsError: '',
       summary: {},
       trendData: [],
       distributionData: [],
+      recentRecords: [],
       lineChart: null,
       pieChart: null
     }
@@ -115,23 +161,39 @@ export default {
   computed: {
     summaryCards() {
       return [
-        { label: '记录天数', value: this.formatValue(this.summary.activeDays, '0'), note: `近 ${this.activeDays} 天` },
-        { label: '平均分', value: this.formatValue(this.summary.avgScore, '--'), note: '情绪评分均值' },
-        { label: '最高 / 最低', value: `${this.formatValue(this.summary.maxScore, '--')} / ${this.formatValue(this.summary.minScore, '--')}`, note: '波动范围' },
-        { label: '主要情绪', value: this.getMoodLabel(this.summary.topMood) || '--', note: '出现频率最高' }
+        { label: '总记录次数', value: this.formatValue(this.summary.totalRecords, '0'), note: `近 ${this.activeDays} 天` },
+        { label: '平均情绪分', value: this.formatAverage(this.summary.avgScore), note: '基于全部记录' },
+        { label: '最高 / 最低', value: `${this.formatValue(this.summary.maxScore, '--')} / ${this.formatValue(this.summary.minScore, '--')}`, note: '评分波动范围' },
+        { label: '主要情绪', value: this.getMoodLabel(this.summary.topMood) || '--', note: `记录天数 ${this.formatValue(this.summary.activeDays, '0')} 天` }
       ]
     },
     hasRecords() {
-      return Number(this.summary.totalRecords || this.summary.activeDays || 0) > 0
+      return Number(this.summary.totalRecords || 0) > 0
+    },
+    recordGroups() {
+      const groupMap = {}
+      this.recentRecords.forEach(record => {
+        const date = record.recordDate || '未知日期'
+        if (!groupMap[date]) {
+          groupMap[date] = []
+        }
+        groupMap[date].push(record)
+      })
+      return Object.keys(groupMap)
+        .sort((a, b) => b.localeCompare(a))
+        .map(date => ({
+          date,
+          records: groupMap[date]
+        }))
     },
     insightText() {
       if (this.loading) return '正在整理近期数据。'
       if (this.error) return '当前数据加载失败，请稍后再试。'
-      if (!this.hasRecords) return '暂无情绪记录。完成每日情绪记录后，可在此查看趋势变化。'
+      if (!this.hasRecords) return '暂无情绪记录。完成情绪记录后，可在此查看趋势变化。'
 
-      const activeDays = Number(this.summary.activeDays || 0)
+      const totalRecords = Number(this.summary.totalRecords || 0)
       const avgScore = Number(this.summary.avgScore || 0)
-      if (activeDays < 3) return '近期记录次数较少，建议连续记录几天后再观察趋势。'
+      if (totalRecords < 3) return '近期记录次数较少，建议持续记录后再观察变化。'
       if (avgScore >= 7) return '近期平均分较高，整体状态较稳定。建议继续保持规律作息。'
       if (avgScore >= 5) return '近期情绪整体处于中间水平，可继续观察压力来源和睡眠情况。'
       return '近期平均分偏低，建议适当休息，并考虑向老师、同学或专业人员寻求支持。'
@@ -140,6 +202,7 @@ export default {
   mounted() {
     this.initCharts()
     this.fetchData()
+    this.fetchRecentRecords()
     window.addEventListener('resize', this.handleResize)
   },
   beforeDestroy() {
@@ -177,6 +240,19 @@ export default {
         this.loading = false
       })
     },
+    fetchRecentRecords() {
+      this.recordsLoading = true
+      this.recordsError = ''
+      getMoodRecords(30).then(res => {
+        this.recentRecords = this.normalizeRecords(res.data || [])
+      }).catch(() => {
+        this.recentRecords = []
+        this.recordsError = '最近记录加载失败，请稍后重试。'
+        this.$message.warning(this.recordsError)
+      }).finally(() => {
+        this.recordsLoading = false
+      })
+    },
     initCharts() {
       if (this.$refs.lineChart) this.lineChart = echarts.init(this.$refs.lineChart)
       if (this.$refs.pieChart) this.pieChart = echarts.init(this.$refs.pieChart)
@@ -184,10 +260,11 @@ export default {
     normalizeTrend(list) {
       return list.map(item => {
         const rawDate = item.record_date || item.recordDate || item.date || ''
-        const score = item.avgScore != null ? item.avgScore : item.avg_score
+        const score = item.avgScore !== undefined && item.avgScore !== null ? item.avgScore : item.avg_score
         return {
-          date: rawDate ? String(rawDate).slice(5) : '',
-          score: Number(score || 0)
+          date: rawDate ? String(rawDate) : '',
+          label: rawDate ? String(rawDate).slice(5) : '',
+          score: this.roundScore(score)
         }
       }).filter(item => item.date)
     },
@@ -202,29 +279,50 @@ export default {
         }
       }).filter(item => item.value > 0)
     },
+    normalizeRecords(list) {
+      return list.map(item => {
+        const recordDate = item.recordDate || item.record_date || this.formatDate(item.createTime || item.create_time)
+        const createTime = item.createTime || item.create_time || ''
+        return {
+          id: item.id,
+          recordDate,
+          createTime,
+          time: this.formatTime(createTime),
+          moodTag: item.moodTag || item.mood_tag,
+          moodScore: item.moodScore !== undefined ? item.moodScore : item.mood_score,
+          note: item.note,
+          timestamp: this.toTimestamp(createTime, recordDate)
+        }
+      }).filter(item => item.recordDate)
+        .sort((a, b) => b.timestamp - a.timestamp)
+    },
     renderLineChart() {
       if (!this.lineChart) return
       this.lineChart.clear()
       this.lineChart.setOption({
-        tooltip: { trigger: 'axis', formatter: params => {
-          const item = params && params[0] ? params[0] : null
-          return item ? `${item.axisValue}<br/>情绪分：${item.value}` : ''
-        }},
-        grid: { left: 44, right: 18, top: 24, bottom: 34 },
+        tooltip: {
+          trigger: 'axis',
+          formatter: params => {
+            const item = params && params[0] ? params[0] : null
+            const record = item ? this.trendData[item.dataIndex] : null
+            return record ? `${record.date}<br/>平均分：${item.value}` : ''
+          }
+        },
+        grid: { left: 44, right: 18, top: 26, bottom: 36 },
         xAxis: {
           type: 'category',
-          data: this.trendData.map(item => item.date),
+          data: this.trendData.map(item => item.label),
           axisTick: { show: false },
-          axisLine: { lineStyle: { color: '#dfe7f1' } },
-          axisLabel: { color: '#7a8798' }
+          axisLine: { lineStyle: { color: '#d8e0ea' } },
+          axisLabel: { color: '#718096' }
         },
         yAxis: {
           type: 'value',
           min: 0,
           max: 10,
           splitNumber: 5,
-          axisLabel: { color: '#7a8798' },
-          splitLine: { lineStyle: { color: '#edf1f7' } }
+          axisLabel: { color: '#718096' },
+          splitLine: { lineStyle: { color: '#edf1f5' } }
         },
         series: [{
           type: 'line',
@@ -267,6 +365,46 @@ export default {
       if (value === null || value === undefined || value === '') return fallback
       return value
     },
+    formatAverage(value) {
+      if (value === null || value === undefined || value === '') return '--'
+      return Number(value).toFixed(1)
+    },
+    formatScore(value) {
+      if (value === null || value === undefined || value === '') return '--'
+      return value
+    },
+    formatNote(value) {
+      return value && String(value).trim() ? value : '未填写备注'
+    },
+    roundScore(value) {
+      const number = Number(value || 0)
+      return Number(number.toFixed(1))
+    },
+    formatDate(value) {
+      if (!value) return ''
+      if (typeof value === 'string' && value.length >= 10) return value.slice(0, 10)
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) return ''
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    },
+    formatTime(value) {
+      if (!value) return ''
+      const date = this.parseDate(value)
+      if (!date) return ''
+      const hour = String(date.getHours()).padStart(2, '0')
+      const minute = String(date.getMinutes()).padStart(2, '0')
+      return `${hour}:${minute}`
+    },
+    toTimestamp(createTime, recordDate) {
+      const date = this.parseDate(createTime) || this.parseDate(recordDate)
+      return date ? date.getTime() : 0
+    },
+    parseDate(value) {
+      if (!value) return null
+      const normalized = typeof value === 'string' ? value.replace(' ', 'T') : value
+      const date = new Date(normalized)
+      return Number.isNaN(date.getTime()) ? null : date
+    },
     handleResize() {
       if (this.lineChart) this.lineChart.resize()
       if (this.pieChart) this.pieChart.resize()
@@ -292,14 +430,16 @@ export default {
 
 .module-header h1 {
   margin: 0;
-  color: #2c3e50;
+  color: #243447;
   font-size: 26px;
+  font-weight: 700;
 }
 
 .module-header p {
   margin: 8px 0 0;
-  color: #6f7d8f;
+  color: #6b7787;
   font-size: 14px;
+  line-height: 1.6;
 }
 
 .module-header .el-button span {
@@ -309,10 +449,11 @@ export default {
 .toolbar,
 .summary-card,
 .panel-card,
+.records-card,
 .insight-card {
   background: #fff;
-  border: 1px solid #dfe7f1;
-  border-radius: 6px;
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
 }
 
 .toolbar {
@@ -325,7 +466,7 @@ export default {
 }
 
 .toolbar > span {
-  color: #2c3e50;
+  color: #243447;
   font-size: 14px;
   font-weight: 600;
 }
@@ -336,7 +477,8 @@ export default {
 
 .error-alert,
 .summary-row,
-.chart-row {
+.chart-row,
+.records-card {
   margin-bottom: 18px;
 }
 
@@ -351,15 +493,20 @@ export default {
 .summary-card span,
 .summary-card small {
   display: block;
-  color: #7a8798;
+  color: #718096;
   font-size: 13px;
 }
 
 .summary-card strong {
   display: block;
+  min-height: 30px;
   margin: 8px 0;
-  color: #2c3e50;
+  color: #243447;
   font-size: 24px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel-card {
@@ -369,13 +516,15 @@ export default {
 .panel-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
 .panel-header strong {
-  color: #2c3e50;
+  display: block;
+  color: #243447;
   font-size: 15px;
+  margin-bottom: 3px;
 }
 
 .panel-header span {
@@ -399,7 +548,94 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.record-groups {
+  display: grid;
+  gap: 18px;
+}
+
+.day-group {
+  border: 1px solid #e4eaf1;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.day-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e4eaf1;
+}
+
+.day-title strong {
+  color: #243447;
+  font-size: 14px;
+}
+
+.day-title span {
+  color: #718096;
+  font-size: 12px;
+}
+
+.record-list {
+  display: grid;
+}
+
+.record-item {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 14px;
+  padding: 13px 14px;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.record-item:last-child {
+  border-bottom: 0;
+}
+
+.record-time {
+  color: #2f6f9f;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.record-body {
+  min-width: 0;
+}
+
+.record-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.record-meta strong {
+  color: #243447;
+  font-size: 14px;
+}
+
+.record-meta span {
+  color: #5d6878;
+  font-size: 12px;
+  background: #f3f6f9;
+  border: 1px solid #e4eaf1;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.record-body p {
+  margin: 0;
+  color: #606f80;
+  font-size: 13px;
+  line-height: 1.7;
+  word-break: break-word;
 }
 
 .insight-card ::v-deep .el-card__body {
@@ -407,7 +643,7 @@ export default {
 }
 
 .insight-title {
-  color: #2c3e50;
+  color: #243447;
   font-size: 15px;
   font-weight: 700;
   margin-bottom: 10px;
@@ -415,7 +651,7 @@ export default {
 
 .insight-card p {
   margin: 0;
-  color: #606266;
+  color: #606f80;
   line-height: 1.8;
   font-size: 14px;
 }
@@ -426,7 +662,8 @@ export default {
   }
 
   .module-header,
-  .toolbar {
+  .toolbar,
+  .panel-header {
     flex-direction: column;
     align-items: stretch;
   }
@@ -435,6 +672,16 @@ export default {
   .chart-box {
     height: 280px;
     min-height: 280px;
+  }
+}
+
+@media (max-width: 520px) {
+  .record-item {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-card strong {
+    font-size: 20px;
   }
 }
 </style>

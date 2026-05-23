@@ -11,7 +11,7 @@ import java.util.Map;
  */
 public interface MoodRecordService extends IService<MoodRecord> {
 
-    /** 记录今日情绪 */
+    /** 新增一条情绪记录 */
     void recordMood(MoodRecord moodRecord);
 
     /** 获取情绪趋势 */
@@ -23,6 +23,9 @@ public interface MoodRecordService extends IService<MoodRecord> {
     /** 获取情绪统计摘要 */
     Map<String, Object> getMoodSummary(Long userId, Integer days);
 
-    /** 获取今日情绪记录 */
-    MoodRecord getTodayRecord(Long userId);
+    /** 获取今日情绪统计和记录列表 */
+    Map<String, Object> getTodayOverview(Long userId);
+
+    /** 获取最近一段时间的情绪记录 */
+    List<MoodRecord> getMoodRecords(Long userId, Integer days);
 }
