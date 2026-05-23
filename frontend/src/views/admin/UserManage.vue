@@ -236,17 +236,17 @@
                   <el-tag size="mini" :type="alertRiskType(row.alertLevel)" effect="dark">{{ alertRiskLevel(row.alertLevel) }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="trigger_reason" label="触发原因" min-width="250" show-overflow-tooltip />
+              <el-table-column prop="triggerReason" label="触发原因" min-width="250" show-overflow-tooltip />
               <el-table-column label="状态" width="100">
                 <template slot-scope="{row}">
                   <el-tag size="mini" :type="crisisStatusType(row.handleStatus)">{{ crisisStatusText(row.handleStatus) }}</el-tag>
                 </template>
               </el-table-column>
               <el-table-column label="处理人" width="100">
-                <template slot-scope="{row}">{{ row.handled_by || '-' }}</template>
+                <template slot-scope="{row}">{{ row.handledBy || '-' }}</template>
               </el-table-column>
               <el-table-column label="时间" width="150">
-                <template slot-scope="{row}">{{ formatTime(row.create_time) }}</template>
+                <template slot-scope="{row}">{{ formatTime(row.createTime) }}</template>
               </el-table-column>
             </el-table>
             <el-empty v-if="!crisisLoading && detailCrisis.length===0" description="暂无预警" />
@@ -312,6 +312,7 @@
 import { getAdminUserList, createAdminUser, updateAdminUser, deleteAdminUser, resetPassword, toggleUserStatus } from '@/api/admin/users'
 import request from '@/utils/request'
 import * as echarts from 'echarts'
+import { extractKeyword, riskLevelFromKeyword, riskTypeFromKeyword } from '@/utils/crisisKeywords'
 
 export default {
   name: 'UserManage',
@@ -337,14 +338,18 @@ export default {
   },
   watch: {
     '$route.query.userId': function() { this.handleRouteQuery() },
-    '$route.query.username': function() { this.handleRouteQuery() }
+    '$route.query.username': function() { this.handleRouteQuery() },
+    '$route.query.id': function() { this.handleRouteQuery() }
   },
 
   methods: {
     handleRouteQuery() {
-      const userId = this.$route.query.userId
+      const userId = this.$route.query.userId || this.$route.query.id
       const username = this.$route.query.username
-      if (!userId && !username) return
+      if (!userId && !username) {
+        this.fetchList()
+        return
+      }
       const params = { pageNum: 1, pageSize: 15 }
       if (userId) { params.userId = parseInt(userId) }
       else if (username) { params.keyword = username }
@@ -567,16 +572,9 @@ export default {
       )
     },
     /* AI 对话风险消息 */
-    RISK_KWS: ['自杀','想死','不想活','活不下去','结束生命','崩溃','绝望','伤害自己','自残','没有意义'],
-    extractRiskWord(c) { if (!c) return ''; for (const kw of this.RISK_KWS) { if (c.includes(kw)) return kw } return '' },
-    chatRiskLevel(c) {
-      const high = ['自杀','想死','不想活','活不下去','结束生命','伤害自己','自残']
-      if (!c) return '正常'
-      for (const kw of high) { if (c.includes(kw)) return '高危' }
-      for (const kw of ['崩溃','绝望']) { if (c.includes(kw)) return '中危' }
-      return '关注'
-    },
-    chatRiskType(c) { const lv = this.chatRiskLevel(c); if (lv === '高危') return 'danger'; if (lv === '中危') return 'warning'; return 'warning' },
+    extractRiskWord(c) { return extractKeyword(c) },
+    chatRiskLevel(c) { return riskLevelFromKeyword(c) },
+    chatRiskType(c) { return riskTypeFromKeyword(c) },
     chatRiskRow({row}) {
       const lv = this.chatRiskLevel(row.content)
       if (lv === '高危') return 'risk-row-danger'

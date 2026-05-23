@@ -8,6 +8,10 @@ import store from './store'
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
 import './assets/css/global.css'
+import { initKeywords } from './utils/crisisKeywords'
+
+// 启动时加载危机关键词（从数据库，失败用 fallback）
+initKeywords()
 
 // 1. 安装 ElementUI 组件库
 Vue.use(ElementUI)

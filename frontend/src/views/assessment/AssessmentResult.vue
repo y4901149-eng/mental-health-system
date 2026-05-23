@@ -91,7 +91,18 @@
 </template>
 
 <script>
+<<<<<<< HEAD
 import { getAssessmentDetail, getAssessmentRecord } from '@/api/assessment'
+=======
+import { getAssessmentRecord } from '@/api/assessment'
+
+const LEVEL_MAP = {
+  normal: { icon: '😊', type: 'success', text: '正常' },
+  mild: { icon: '🙂', type: 'warning', text: '轻度困扰' },
+  moderate: { icon: '😐', type: 'warning', text: '中度困扰' },
+  severe: { icon: '😔', type: 'danger', text: '重度困扰' }
+}
+>>>>>>> feature-risk-admin
 
 export default {
   name: 'AssessmentResult',
@@ -104,6 +115,7 @@ export default {
     }
   },
   computed: {
+<<<<<<< HEAD
     normalizedLevel() {
       return this.record && this.record.level ? this.record.level : 'unknown'
     },
@@ -187,6 +199,23 @@ export default {
       } else {
         this.goList()
       }
+=======
+    levelInfo() {
+      return LEVEL_MAP[this.record.level] || LEVEL_MAP.normal
+    },
+    levelIcon() { return this.levelInfo.icon },
+    levelType() { return this.levelInfo.type },
+    levelText() { return this.levelInfo.text }
+  },
+  created() {
+    const id = this.$route.params.id
+    if (id) {
+      getAssessmentRecord(id).then(res => {
+        if (res.data) this.record = res.data
+      }).catch(() => {
+        this.$message.error('获取评估结果失败')
+      })
+>>>>>>> feature-risk-admin
     }
   }
 }

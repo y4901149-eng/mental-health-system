@@ -1,92 +1,114 @@
-<!-- 管理后台 - AI 心理健康监控首页 -->
+<!-- 管理后台 - 心理健康监控首页 -->
 <template>
   <div class="dashboard">
-    <h2 style="font-size:20px;font-weight:700;color:#2C3E50;margin-bottom:20px;">📊 AI 心理健康监控</h2>
+    <!-- 标题行 -->
+    <div class="dash-header">
+      <h2>📊 心理健康监控</h2>
+      <span class="dash-header-time">{{ currentTime }}</span>
+    </div>
 
     <!-- 第一行：6 张统计卡片 -->
-    <el-row :gutter="14" style="margin-bottom:16px;">
+    <el-row :gutter="10" style="margin-bottom:12px;">
       <el-col :span="4" v-for="s in statCards" :key="s.label">
-        <el-card shadow="never" class="stat-card" :body-style="{ padding: '16px' }">
-          <div class="stat-icon" :style="{ background: s.bg }">{{ s.icon }}</div>
-          <div class="stat-body">
-            <div class="stat-val">{{ s.value }}</div>
-            <div class="stat-label">{{ s.label }}</div>
-            <div class="stat-trend">{{ s.trend }}</div>
+        <el-card shadow="never" class="stat-card" :body-style="{ padding: '14px 12px' }">
+          <div class="stat-inner">
+            <div class="stat-icon" :style="{ background: s.bg }">{{ s.icon }}</div>
+            <div class="stat-body">
+              <div class="stat-val">{{ s.value }}</div>
+              <div class="stat-label">{{ s.label }}</div>
+            </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
     <!-- 第二行：趋势图 + 分布图 -->
-    <el-row :gutter="14" style="margin-bottom:16px;">
+    <el-row :gutter="10" style="margin-bottom:12px;">
       <el-col :span="14">
-        <el-card shadow="never">
-          <div slot="header" class="card-hd"><i class="el-icon-data-line" style="color:#409EFF;"></i> 近7天情绪趋势</div>
-          <div ref="lineChart" style="width:100%;height:280px;"></div>
+        <el-card shadow="never" class="chart-card">
+          <div slot="header" class="ch-hd"><i class="el-icon-data-line"></i> 近7天情绪趋势</div>
+          <div ref="lineChart" class="chart-box"></div>
         </el-card>
       </el-col>
       <el-col :span="10">
-        <el-card shadow="never">
-          <div slot="header" class="card-hd"><i class="el-icon-pie-chart" style="color:#6C63FF;"></i> 情绪类型分布</div>
-          <div ref="pieChart" style="width:100%;height:280px;"></div>
+        <el-card shadow="never" class="chart-card">
+          <div slot="header" class="ch-hd"><i class="el-icon-pie-chart"></i> 情绪类型分布</div>
+          <div ref="pieChart" class="chart-box"></div>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- 第三行：异常用户 TOP5 + 最近 AI 对话 -->
-    <el-row :gutter="14" style="margin-bottom:16px;">
+    <!-- 第三行：异常用户 TOP5 + 最近预警 -->
+    <el-row :gutter="10" style="margin-bottom:12px;">
       <el-col :span="14">
-        <el-card shadow="never">
-          <div slot="header" class="card-hd" style="justify-content:space-between;">
+        <el-card shadow="never" class="tb-card">
+          <div slot="header" class="ch-hd" style="justify-content:space-between;">
             <span><i class="el-icon-warning" style="color:#F56C6C;"></i> 异常用户 TOP5</span>
-            <el-tag size="mini" type="danger">按风险降序</el-tag>
+            <el-tag size="mini" type="danger" effect="plain">按风险降序</el-tag>
           </div>
           <el-table :data="riskUsers" stripe size="small" style="width:100%;"
-            :header-cell-style="{background:'#F8FAFF',color:'#2C3E50',textAlign:'center',fontSize:'12px'}"
-            :cell-style="{textAlign:'center',padding:'5px 0',fontSize:'12px'}"
+            :header-cell-style="hdrStyle"
+            :cell-style="cellStyle"
             :row-class-name="riskRow">
-            <el-table-column prop="username" label="用户" min-width="80" />
-            <el-table-column label="风险等级" min-width="80">
+            <el-table-column label="用户" width="100" align="center">
+              <template slot-scope="{row}">{{ row.username }}</template>
+            </el-table-column>
+            <el-table-column label="等级" width="80" align="center">
               <template slot-scope="{row}"><el-tag size="mini" :type="row.type" effect="dark">{{ row.level }}</el-tag></template>
             </el-table-column>
-            <el-table-column prop="lastMood" label="最近情绪" min-width="70" />
-            <el-table-column prop="riskCount" label="风险次数" min-width="70" />
-            <el-table-column prop="lastActive" label="最近活跃" min-width="120" />
-            <el-table-column label="操作" min-width="90">
+            <el-table-column label="最近情绪" width="100" align="center">
+              <template slot-scope="{row}">{{ row.lastMood || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="风险次数" width="80" align="center">
+              <template slot-scope="{row}">{{ row.riskCount }}</template>
+            </el-table-column>
+            <el-table-column label="最近活跃" width="170" align="center">
+              <template slot-scope="{row}">{{ fmt(row.lastActive) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="80" align="center">
               <template slot-scope="{row}">
-                <el-button type="text" size="mini" @click="$router.push({path:'/admin/users',query:{username:row.username}})">详情</el-button>
+                <el-button type="text" size="mini" style="color:#409EFF;" @click="$router.push({path:'/admin/users',query:{id:row.userId}})">详情</el-button>
               </template>
             </el-table-column>
           </el-table>
         </el-card>
       </el-col>
       <el-col :span="10">
-        <el-card shadow="never">
-          <div slot="header" class="card-hd"><i class="el-icon-chat-dot-round" style="color:#67C23A;"></i> 最近 AI 对话</div>
-          <div class="chat-feed">
-            <div v-for="(c,i) in recentChats" :key="i" class="chat-item">
-              <div class="chat-avatar" :style="{background:c.bg}">{{ c.initial }}</div>
-              <div class="chat-body">
-                <div class="chat-user">{{ c.username }} <el-tag size="mini" :type="c.riskType" style="margin-left:4px;" v-if="c.riskType">{{ c.riskLabel }}</el-tag></div>
-                <div class="chat-text">{{ c.summary }}</div>
-                <div class="chat-time">{{ c.time }}</div>
-              </div>
-            </div>
-            <div v-if="recentChats.length===0" style="text-align:center;padding:30px;color:#C0C4CC;font-size:13px;">暂无对话</div>
-          </div>
+        <el-card shadow="never" class="tb-card">
+          <div slot="header" class="ch-hd"><i class="el-icon-warning" style="color:#F56C6C;"></i> 最近预警记录</div>
+          <el-table :data="crisisList" stripe size="small" style="width:100%;"
+            :header-cell-style="hdrStyle"
+            :cell-style="cellStyle">
+            <el-table-column label="用户" width="100" align="center">
+              <template slot-scope="{row}">
+                <el-button type="text" size="mini" style="color:#409EFF;" @click="goToCrisis(row)">{{ row.username }}</el-button>
+              </template>
+            </el-table-column>
+            <el-table-column label="等级" width="80" align="center">
+              <template slot-scope="{row}">
+                <el-tag size="mini" :type="row.levelType" effect="dark">{{ row.levelText }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="关键词" width="100" align="center">
+              <template slot-scope="{row}"><el-tag size="mini" type="danger">{{ row.keyword }}</el-tag></template>
+            </el-table-column>
+            <el-table-column label="时间" width="170" align="center">
+              <template slot-scope="{row}">{{ fmt(row.time) }}</template>
+            </el-table-column>
+          </el-table>
         </el-card>
       </el-col>
     </el-row>
 
     <!-- 第四行：系统运行状态 -->
-    <el-card shadow="never">
-      <div slot="header" class="card-hd"><i class="el-icon-monitor" style="color:#409EFF;"></i> 系统运行状态</div>
-      <el-row :gutter="14">
+    <el-card shadow="never" class="sys-card">
+      <div slot="header" class="ch-hd"><i class="el-icon-monitor"></i> 系统运行状态</div>
+      <el-row :gutter="10">
         <el-col :span="6" v-for="s in sysStatus" :key="s.label">
-          <div class="sys-status-item">
-            <span class="status-dot" :class="s.online?'green':'red'"></span>
-            <span class="status-label">{{ s.label }}</span>
-            <span class="status-val" :style="{color:s.online?'#67C23A':'#F56C6C'}">{{ s.online ? '正常' : '异常' }}</span>
+          <div class="sys-item">
+            <span class="sd" :class="s.online?'g':'r'"></span>
+            <span class="sl">{{ s.label }}</span>
+            <span class="sv" :style="{color:s.online?'#67C23A':'#F56C6C'}">{{ s.status || (s.online?'正常':'异常') }}</span>
           </div>
         </el-col>
       </el-row>
@@ -96,106 +118,181 @@
 
 <script>
 import * as echarts from 'echarts'
-
-const COLORS = ['#409EFF','#67C23A','#E6A23C','#F56C6C','#6C63FF','#fa541c']
-const avatarBg = ['#EBF5FF','#E8F8F0','#FFF1F0','#F0EFFF','#FFF7E6']
+import { getCrisisList } from '@/api/crisis'
+import request from '@/utils/request'
 
 export default {
   name: 'Dashboard',
   data() {
     return {
       statCards: [
-        { icon:'👥', label:'总用户数', value:'...', trend:'', bg:COLORS[0]+'15' },
-        { icon:'🔥', label:'今日活跃', value:'...', trend:'', bg:COLORS[1]+'15' },
-        { icon:'⚠️', label:'高风险用户', value:'...', trend:'', bg:COLORS[3]+'15' },
-        { icon:'💬', label:'AI对话次数', value:'...', trend:'', bg:COLORS[4]+'15' },
-        { icon:'📝', label:'今日新增日记', value:'...', trend:'', bg:COLORS[2]+'15' },
-        { icon:'⏳', label:'待处理预警', value:'...', trend:'', bg:COLORS[5]+'15' }
+        { icon:'👥', label:'总用户数', value:'...', bg:'linear-gradient(135deg,#EBF5FF,#D6E8FF)' },
+        { icon:'🔥', label:'今日活跃', value:'...', bg:'linear-gradient(135deg,#E8F8F0,#C8E6D9)' },
+        { icon:'⚠️', label:'高风险用户', value:'...', bg:'linear-gradient(135deg,#FFF1F0,#FFD9D8)' },
+        { icon:'💬', label:'AI对话次数', value:'...', bg:'linear-gradient(135deg,#F0EFFF,#DDD9FF)' },
+        { icon:'📝', label:'今日新增日记', value:'...', bg:'linear-gradient(135deg,#FFF7E6,#FFEAB3)' },
+        { icon:'⏳', label:'待处理预警', value:'...', bg:'linear-gradient(135deg,#FFF5F5,#FFD6D6)' }
       ],
       riskUsers: [],
-      recentChats: [
-        { username:'student', initial:'学', summary:'我最近压力很大，总是睡不好...', time:'14:30', riskType:'danger', riskLabel:'高危', bg:avatarBg[0] },
-        { username:'liyutong', initial:'李', summary:'我好累，感觉撑不下去了...', time:'23:16', riskType:'danger', riskLabel:'高危', bg:avatarBg[2] },
-        { username:'zhangsan', initial:'张', summary:'最近和室友关系不太好...', time:'10:15', riskType:'', riskLabel:'', bg:avatarBg[3] },
-        { username:'lisi', initial:'李', summary:'今天终于把论文写完了！', time:'18:40', riskType:'', riskLabel:'', bg:avatarBg[1] },
-        { username:'admin', initial:'管', summary:'今天工作进展顺利...', time:'09:20', riskType:'', riskLabel:'', bg:avatarBg[4] }
-      ],
+      crisisList: [],
+      recentChats: [],
       sysStatus: [
         { label:'AI 服务', online:true }, { label:'数据库', online:true },
-        { label:'预警系统', online:true }, { label:'在线用户', online:true, extra:'12 人' }
+        { label:'预警系统', online:true }, { label:'后端服务', online:true }
       ],
-      lineChart:null, pieChart:null
+      lineChart:null, pieChart:null, chartTrend:null, moodDistribution:[], refreshTimer:null,
+      currentTime: '',
+      hdrStyle: { background:'#F0F4FF', color:'#2C3E50', fontWeight:600, fontSize:'12px', padding:'6px 0' },
+      cellStyle: { textAlign:'center', padding:'4px 0', fontSize:'12px' }
     }
+  },
+  created() {
+    this.updateTime()
+    setInterval(() => this.updateTime(), 60000)
   },
   mounted() {
     this.fetchData()
-    this.$nextTick(() => {
-      this.initLineChart()
-      this.initPieChart()
-    })
+    this.fetchCrisis()
+    this.fetchTrend()
+    this.$nextTick(() => { this.initPieChart(); this.updateTime() })
+    this.refreshTimer = setInterval(() => this.refreshAll(), 60000)
     window.addEventListener('resize', this.handleResize)
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize)
+    if(this.refreshTimer) { clearInterval(this.refreshTimer); this.refreshTimer = null }
     if(this.lineChart)this.lineChart.dispose()
     if(this.pieChart)this.pieChart.dispose()
   },
   methods: {
-    handleResize() {
-      if(this.lineChart)this.lineChart.resize()
-      if(this.pieChart)this.pieChart.resize()
+    updateTime() {
+      const d = new Date()
+      this.currentTime = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0')
     },
+    handleResize() { if(this.lineChart)this.lineChart.resize(); if(this.pieChart)this.pieChart.resize() },
     fetchData() {
-      const token = localStorage.getItem('mental_health_token')
-      const headers = { 'Authorization': 'Bearer ' + token }
-      // 统计卡片
-      fetch('/api/admin/dashboard/summary', { headers }).then(r=>r.json()).then(res => {
+      request.get('/admin/dashboard/summary').then(res => {
         const d = res.data || {}
         this.statCards = [
-          { icon:'👥', label:'总用户数', value:d.userCount||0, trend:'注册用户', bg:COLORS[0]+'15' },
-          { icon:'🔥', label:'今日活跃', value:d.userCount||0, trend:'', bg:COLORS[1]+'15' },
-          { icon:'⚠️', label:'高风险用户', value:d.pendingCrisisCount||0, trend:'待处理', bg:COLORS[3]+'15' },
-          { icon:'💬', label:'AI对话次数', value:d.chatCount||0, trend:'总计', bg:COLORS[4]+'15' },
-          { icon:'📝', label:'今日新增日记', value:d.diaryCount||0, trend:'总计', bg:COLORS[2]+'15' },
-          { icon:'⏳', label:'待处理预警', value:d.pendingCrisisCount||0, trend:'', bg:COLORS[5]+'15' }
+          { icon:'👥', label:'总用户数', value:d.userCount||0, bg:'linear-gradient(135deg,#EBF5FF,#D6E8FF)' },
+          { icon:'🔥', label:'今日活跃', value:d.todayActive||0, bg:'linear-gradient(135deg,#E8F8F0,#C8E6D9)' },
+          { icon:'⚠️', label:'高风险用户', value:d.highRiskUsers||0, bg:'linear-gradient(135deg,#FFF1F0,#FFD9D8)' },
+          { icon:'💬', label:'AI对话次数', value:d.todayChatCount||0, bg:'linear-gradient(135deg,#F0EFFF,#DDD9FF)' },
+          { icon:'📝', label:'今日新增日记', value:d.todayDiaryCount||0, bg:'linear-gradient(135deg,#FFF7E6,#FFEAB3)' },
+          { icon:'⏳', label:'待处理预警', value:d.pendingCrisisCount||0, bg:'linear-gradient(135deg,#FFF5F5,#FFD6D6)' }
         ]
+        this.moodDistribution = d.moodDistribution || []
+        // 更新系统运行状态
+        const dbOk = d.systemInfo && d.systemInfo.database === 'connected'
+        this.sysStatus = [
+          { label:'AI 服务', status:'运行中', online:true },
+          { label:'数据库', status: dbOk ? '连接正常' : '连接异常', online: dbOk },
+          { label:'预警系统', status: '24h触发' + (d.crisis24h||0) + '次', online: true },
+          { label:'后端服务', status: '8081在线', online: true }
+        ]
+        this.$nextTick(() => this.initPieChart())
       }).catch(()=>{})
-      // 异常用户 TOP5
-      fetch('/api/admin/dashboard/risk-users', { headers }).then(r=>r.json()).then(res => {
-        const users = res.data || []
-        this.riskUsers = users.map(u => ({
+    },
+    fetchCrisis() {
+      getCrisisList({ pageNum:1, pageSize:50 }).then(res => {
+        const records = (res.data && res.data.records) || []
+        // 最近预警列表（取前5条）
+        this.crisisList = records.slice(0,5).map(r => ({
+          userId: r.userId,
+          username: r.username || '用户' + r.userId,
+          levelType: r.alertLevel >= 4 ? 'danger' : r.alertLevel >= 3 ? 'warning' : 'info',
+          levelText: r.alertLevel >= 4 ? '高危' : r.alertLevel >= 3 ? '中危' : '关注',
+          keyword: this.extractCrisisKeyword(r.triggerReason),
+          time: this.fmt(r.createTime)
+        }))
+        // 从预警记录统计异常用户 TOP5
+        const userMap = {}
+        records.forEach(r => {
+          const name = r.username || '用户' + r.userId
+          if (!userMap[name]) userMap[name] = { userId: r.userId, username: name, count:0, maxLevel:0, lastTime:'' }
+          userMap[name].count++
+          if ((r.alertLevel||0) > userMap[name].maxLevel) userMap[name].maxLevel = r.alertLevel
+          if (r.createTime && r.createTime > userMap[name].lastTime) userMap[name].lastTime = r.createTime
+        })
+        const sorted = Object.values(userMap)
+          .sort((a,b) => b.count - a.count || b.maxLevel - a.maxLevel)
+          .slice(0,5)
+        this.riskUsers = sorted.map(u => ({
+          userId: u.userId,
           username: u.username,
-          level: u.avgScore < 20 ? '高危' : u.avgScore < 40 ? '中危' : '关注',
-          type: u.avgScore < 20 ? 'danger' : u.avgScore < 40 ? 'warning' : 'warning',
-          lastMood: '-',
-          riskCount: '-',
-          lastActive: u.lastDiaryTime || '-',
-          id: u.id
+          level: u.maxLevel >= 4 ? '高危' : u.maxLevel >= 3 ? '中危' : '关注',
+          type: u.maxLevel >= 4 ? 'danger' : u.maxLevel >= 3 ? 'warning' : 'warning',
+          lastMood: u.maxLevel >= 4 ? '高危波动' : u.maxLevel >= 3 ? '中危波动' : '需关注',
+          riskCount: u.count,
+          lastActive: u.lastTime || ''
         }))
       }).catch(()=>{})
+    },
+    fetchTrend() {
+      request.get('/admin/dashboard/trend').then(res => {
+        this.chartTrend = res.data
+        this.$nextTick(() => this.initLineChart())
+      }).catch(() => {
+        // API 失败时使用空数据，保证图表至少渲染坐标轴
+        this.chartTrend = { dates: [], avgScores: [], highRiskCounts: [] }
+        this.$nextTick(() => this.initLineChart())
+      })
+    },
+    fmt(t) {
+      if (!t) return ''
+      const d = new Date(t)
+      if (isNaN(d.getTime())) return t
+      const Y = d.getFullYear()
+      const M = String(d.getMonth()+1).padStart(2,'0'), D = String(d.getDate()).padStart(2,'0')
+      const h = String(d.getHours()).padStart(2,'0'), m = String(d.getMinutes()).padStart(2,'0')
+      return Y + '-' + M + '-' + D + ' ' + h + ':' + m
+    },
+    extractCrisisKeyword(text) {
+      if (!text) return '-'
+      const kws = ['自杀','想死','不想活','活不下去','结束生命','崩溃','绝望','伤害自己','自残','好累','没有意义']
+      for (const kw of kws) { if (text.includes(kw)) return kw }
+      return '异常'
+    },
+    refreshAll() {
+      this.fetchData()
+      this.fetchCrisis()
+      this.fetchTrend()
+    },
+    goToCrisis(row) {
+      if (row && row.userId) {
+        this.$router.push({ path: '/admin/crisis', query: { userId: row.userId } })
+      }
     },
     initLineChart() {
       const el = this.$refs.lineChart
       if(!el)return
-      this.lineChart = echarts.init(el)
+      if (!this.chartTrend) { this.fetchTrend(); return }
+      if (!this.lineChart) this.lineChart = echarts.init(el)
+      const d = this.chartTrend
       this.lineChart.setOption({
-        tooltip:{ trigger:'axis' },
-        legend:{ data:['平均分','高危人数'], bottom:0, icon:'circle', itemWidth:8 },
-        grid:{ left:45, right:15, top:10, bottom:40 },
-        xAxis:{ type:'category', data:['05-05','05-06','05-07','05-08','05-09','05-10','05-11'], axisLabel:{ color:'#909399',fontSize:11 } },
+        tooltip:{ trigger:'axis', formatter: function(p) {
+          if (!p || !p.length) return ''
+          return '<div style="font-size:13px;line-height:1.8">' +
+            '<div style="font-weight:600;color:#1A2332;margin-bottom:2px">' + p[0].axisValue + '</div>' +
+            '<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#409EFF"></span> 平均情绪分：<b>' + p[0].value + '</b></div>' +
+            '<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#F56C6C"></span> 高风险人数：<b>' + (p[1]?p[1].value:0) + '</b></div>' +
+            '</div>'
+        } }, grid:{ left:45, right:15, top:15, bottom:35 },
+        legend:{ data:['平均分','高危人数'], bottom:0, icon:'circle', itemWidth:8, itemHeight:8, textStyle:{fontSize:11} },
+        xAxis:{ type:'category', data: d.dates || [], axisLabel:{ color:'#909399',fontSize:11 } },
         yAxis:[
-          { type:'value', min:0, max:100, splitLine:{ lineStyle:{ color:'#F0F5FF' } }, axisLabel:{ color:'#909399' } },
-          { type:'value', min:0, max:10, splitLine:{ show:false }, axisLabel:{ color:'#909399' } }
+          { type:'value', min:0, max:100, splitLine:{ lineStyle:{ color:'#F0F4FF' } }, axisLabel:{ color:'#909399',fontSize:10 } },
+          { type:'value', min:0, max:10, splitLine:{ show:false }, axisLabel:{ color:'#909399',fontSize:10 } }
         ],
         series:[
-          { name:'平均分', type:'line', data:[62,55,70,48,58,72,65], smooth:true, showSymbol:true, symbolSize:6,
+          { name:'平均分', type:'line', data: d.avgScores || [], smooth:true, showSymbol:true, symbolSize:6,
             lineStyle:{ color:'#409EFF', width:2.5 },
             areaStyle:{ color:new echarts.graphic.LinearGradient(0,0,0,1,[
               { offset:0, color:'rgba(64,158,255,0.3)' }, { offset:1, color:'rgba(64,158,255,0.02)' }
             ])},
             itemStyle:{ color:'#409EFF' }
           },
-          { name:'高危人数', type:'line', yAxisIndex:1, data:[2,1,3,2,4,1,2], smooth:true, showSymbol:true, symbolSize:6,
+          { name:'高危人数', type:'line', yAxisIndex:1, data: d.highRiskCounts || [], smooth:true, showSymbol:true, symbolSize:5,
             lineStyle:{ color:'#F56C6C', width:2 },
             itemStyle:{ color:'#F56C6C' }
           }
@@ -205,20 +302,31 @@ export default {
     initPieChart() {
       const el = this.$refs.pieChart
       if(!el)return
-      this.pieChart = echarts.init(el)
+      if (!this.pieChart) this.pieChart = echarts.init(el)
+      const colorMap = { '开心':'#409EFF','平静':'#67C23A','焦虑':'#E6A23C','难过':'#F56C6C','愤怒':'#fa541c','疲惫':'#909399' }
+      const raw = this.moodDistribution || []
+      let pieData = raw.map(item => ({
+        name: item.name,
+        value: item.value,
+        itemStyle: { color: colorMap[item.name] || '#909399' }
+      }))
+      // 无数据时展示占位
+      if (pieData.length === 0) {
+        pieData = [
+          { name:'开心', value:0, itemStyle:{ color:'#409EFF' } },
+          { name:'平静', value:0, itemStyle:{ color:'#67C23A' } },
+          { name:'焦虑', value:0, itemStyle:{ color:'#E6A23C' } },
+          { name:'难过', value:0, itemStyle:{ color:'#F56C6C' } },
+          { name:'愤怒', value:0, itemStyle:{ color:'#fa541c' } }
+        ]
+      }
       this.pieChart.setOption({
-        tooltip:{ trigger:'item', formatter:'{b}: {c} ({d}%)' },
+        tooltip:{ trigger:'item', formatter:'{b}: {c}' },
         series:[{
           type:'pie', radius:['38%','65%'], center:['50%','50%'],
           padAngle:2, itemStyle:{ borderRadius:6, borderColor:'#fff', borderWidth:2 },
-          label:{ show:true, color:'#606266', fontSize:12 },
-          data:[
-            { name:'😊 开心', value:45, itemStyle:{ color:'#409EFF' } },
-            { name:'😌 平静', value:32, itemStyle:{ color:'#67C23A' } },
-            { name:'😰 焦虑', value:12, itemStyle:{ color:'#E6A23C' } },
-            { name:'😢 难过', value:8, itemStyle:{ color:'#F56C6C' } },
-            { name:'😠 愤怒', value:3, itemStyle:{ color:'#fa541c' } }
-          ]
+          label:{ show:true, color:'#606266', fontSize:11 },
+          data: pieData
         }]
       })
     },
@@ -233,31 +341,39 @@ export default {
 </script>
 
 <style scoped>
-.dashboard { max-width:1400px; margin:0 auto; padding:0 8px 40px; }
-.stat-card { cursor:default; transition: all 0.3s ease !important; }
-.stat-card:hover { transform:translateY(-3px); box-shadow:0 8px 25px rgba(64,158,255,0.12) !important; }
-.stat-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; margin-bottom:8px; }
+.dashboard { max-width:1400px; margin:0 auto; padding:0 12px 30px; }
+
+/* ===== 标题行 ===== */
+.dash-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.dash-header h2 { font-size:18px; font-weight:700; color:#1A2332; margin:0; letter-spacing:-0.3px; }
+.dash-header-time { font-size:12px; color:#8C9AB7; background:#F0F4FF; padding:4px 12px; border-radius:6px; }
+
+/* ===== 统计卡片 ===== */
+.stat-card { border-radius:12px !important; border:1px solid #E8ECF4 !important; transition:all 0.2s !important; }
+.stat-card:hover { border-color:#C8D6E5 !important; box-shadow:0 4px 12px rgba(0,0,0,0.04) !important; }
+.stat-inner { display:flex; align-items:center; gap:10px; }
+.stat-icon { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
 .stat-body { display:flex; flex-direction:column; }
-.stat-val { font-size:22px; font-weight:700; color:#2C3E50; line-height:1.2; }
-.stat-label { font-size:12px; color:#909399; margin-top:2px; }
-.stat-trend { font-size:11px; color:#A0AEC0; margin-top:4px; }
-.card-hd { font-weight:600; font-size:14px; color:#2C3E50; display:flex; align-items:center; gap:6px; }
+.stat-val { font-size:20px; font-weight:800; color:#1A2332; line-height:1.1; letter-spacing:-0.3px; }
+.stat-label { font-size:11px; color:#8C9AB7; margin-top:1px; }
 
-/* 聊天流 */
-.chat-feed { max-height:340px; overflow-y:auto; }
-.chat-item { display:flex; gap:10px; padding:10px 0; border-bottom:1px solid #F5F7FA; }
-.chat-item:last-child { border-bottom:none; }
-.chat-avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#2C3E50; flex-shrink:0; }
-.chat-body { flex:1; min-width:0; }
-.chat-user { font-size:12px; font-weight:600; color:#2C3E50; margin-bottom:2px; }
-.chat-text { font-size:12px; color:#606266; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.chat-time { font-size:11px; color:#C0C4CC; margin-top:2px; }
+/* ===== 图表卡片 ===== */
+.chart-card { border-radius:12px !important; border:1px solid #E8ECF4 !important; }
+.chart-card .chart-box { width:100%; height:260px; }
+.ch-hd { font-weight:700; font-size:13px; color:#1A2332; display:flex; align-items:center; gap:6px; }
+.ch-hd i { font-size:15px; color:#409EFF; }
 
-/* 系统状态 */
-.sys-status-item { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#F8FAFF; border-radius:8px; }
-.status-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-.status-dot.green { background:#67C23A; box-shadow:0 0 6px rgba(103,194,58,0.4); }
-.status-dot.red { background:#F56C6C; box-shadow:0 0 6px rgba(245,108,108,0.4); }
-.status-label { font-size:13px; color:#606266; flex:1; }
-.status-val { font-size:13px; font-weight:600; }
+/* ===== 表格卡片 ===== */
+.tb-card { border-radius:12px !important; border:1px solid #E8ECF4 !important; }
+.tb-card :deep(.el-table__body-wrapper) { overflow-x:hidden; }
+
+/* ===== 系统状态 ===== */
+.sys-card { border-radius:12px !important; border:1px solid #E8ECF4 !important; }
+.sys-item { display:flex; align-items:center; gap:10px; padding:10px 12px; background:#F8FAFF; border-radius:8px; border:1px solid #E8ECF4; transition:all 0.15s; }
+.sys-item:hover { background:#F0F4FF; border-color:#C8D6E5; }
+.sd { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.sd.g { background:#67C23A; box-shadow:0 0 6px rgba(103,194,58,0.4); }
+.sd.r { background:#F56C6C; box-shadow:0 0 6px rgba(245,108,108,0.4); }
+.sl { font-size:12px; color:#606266; flex:1; }
+.sv { font-size:12px; font-weight:700; }
 </style>

@@ -35,7 +35,11 @@ export function getUserRecords() {
   })
 }
 
+<<<<<<< HEAD
 /** 获取单次测评结果详情 */
+=======
+/** 获取评估记录详情 */
+>>>>>>> feature-risk-admin
 export function getAssessmentRecord(id) {
   return request({
     url: '/assessment/record/' + id,
