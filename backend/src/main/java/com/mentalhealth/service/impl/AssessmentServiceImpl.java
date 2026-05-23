@@ -17,8 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 评估量表 Service 实现类
- * 作用：管理量表、处理用户提交的评估、计算得分
+ * 心理测评 Service 实现
  */
 @Service
 public class AssessmentServiceImpl extends ServiceImpl<AssessmentMapper, Assessment> implements AssessmentService {
@@ -42,7 +41,6 @@ public class AssessmentServiceImpl extends ServiceImpl<AssessmentMapper, Assessm
         if (assessment == null) {
             throw new RuntimeException("量表不存在");
         }
-        // 查询该量表的所有题目
         List<AssessmentQuestion> questions = questionMapper.selectList(
                 new LambdaQueryWrapper<AssessmentQuestion>()
                         .eq(AssessmentQuestion::getAssessmentId, id)
@@ -57,21 +55,21 @@ public class AssessmentServiceImpl extends ServiceImpl<AssessmentMapper, Assessm
         if (assessment == null) {
             throw new RuntimeException("量表不存在");
         }
-
-        // 计算总分
-        int totalScore = 0;
-        for (Integer score : answers.values()) {
-            totalScore += score;
+        if (answers == null || answers.isEmpty()) {
+            throw new RuntimeException("请完成测评后再提交");
         }
 
-        // 计算等级
+        int totalScore = 0;
+        for (Integer score : answers.values()) {
+            if (score != null) {
+                totalScore += score;
+            }
+        }
+
         int questionCount = answers.size();
         String level = calculateLevel(totalScore, questionCount);
-
-        // 根据等级生成建议
         String suggestion = generateSuggestion(level, assessment.getType());
 
-        // 保存评估记录
         AssessmentRecord record = new AssessmentRecord();
         record.setUserId(userId);
         record.setAssessmentId(assessmentId);
@@ -91,29 +89,58 @@ public class AssessmentServiceImpl extends ServiceImpl<AssessmentMapper, Assessm
 
     @Override
     public String calculateLevel(Integer totalScore, Integer questionCount) {
-        // 每个题目满分通常为3-4分，按平均每个题目3分计算百分比
-        int maxScore = questionCount * 3;
-        double percentage = (double) totalScore / maxScore;
+        if (totalScore == null || questionCount == null || questionCount <= 0) {
+            return "normal";
+        }
 
-        if (percentage < 0.3) return "normal";      // 正常
-        if (percentage < 0.5) return "mild";        // 轻度
-        if (percentage < 0.7) return "moderate";    // 中度
-        return "severe";                              // 重度
+        int minScore = questionCount;
+        int maxScore = questionCount * 4;
+        double ratio = (double) (totalScore - minScore) / (maxScore - minScore);
+
+        if (ratio < 0.25) return "normal";
+        if (ratio < 0.50) return "mild";
+        if (ratio < 0.75) return "moderate";
+        return "severe";
     }
 
-    /** 根据等级和类型生成建议 */
     private String generateSuggestion(String level, String type) {
+        String focus = getTypeFocus(type);
         switch (level) {
             case "normal":
-                return "您的心理状态良好，请继续保持健康的生活方式。建议每天保持适量运动，保证充足睡眠。";
+                return focus + "当前结果整体处于较平稳范围。建议继续保持规律作息、适当运动，并定期记录情绪变化。结果仅供自我了解和学习参考，不作为医学诊断。";
             case "mild":
-                return "您存在轻度心理困扰，建议尝试以下方法：1. 每天进行15分钟深呼吸练习；2. 保持规律作息；3. 与朋友或家人倾诉；4. 如症状持续，建议咨询心理医生。";
+                return focus + "结果提示近期可能存在一定压力或情绪波动。建议留意睡眠、学习负荷和人际支持，尝试把压力事项拆分处理。结果仅供自我了解和学习参考，不作为医学诊断。";
             case "moderate":
-                return "您存在中度心理困扰，强烈建议您：1. 尽快预约专业心理咨询；2. 不要独自面对，寻求家人朋友支持；3. 避免过度自我批评；4. 必要时前往医院心理科就诊。";
+                return focus + "结果提示当前困扰较明显。建议主动与辅导员、家人、朋友或校心理中心沟通，必要时预约专业咨询。结果仅供自我了解和学习参考，不作为医学诊断。";
             case "severe":
-                return "您的评估结果提示需要立即关注！请尽快前往医院心理科或精神科就诊，或拨打心理危机干预热线。不要独自承受，专业帮助就在您身边。";
+                return focus + "结果提示当前状态需要重点关注。建议尽快联系校心理中心、辅导员或专业人员获得支持；如出现安全风险，请及时求助。结果仅供自我了解和学习参考，不作为医学诊断。";
             default:
-                return "请保持良好的心理状态，如有不适请及时寻求帮助。";
+                return "建议结合近期学习、生活和情绪状态进行参考，并在需要时寻求老师或专业人员帮助。结果仅供自我了解和学习参考，不作为医学诊断。";
         }
+    }
+
+    private String getTypeFocus(String type) {
+        if ("anxiety".equals(type)) return "本测评主要反映焦虑相关体验。";
+        if ("depression".equals(type)) return "本测评主要反映低落情绪和兴趣变化。";
+        if ("mood_fluctuation".equals(type)) return "本测评主要反映情绪起伏和恢复速度。";
+        if ("stress".equals(type)) return "本测评主要反映近期压力感受。";
+        if ("sleep".equals(type)) return "本测评主要反映睡眠质量和作息状态。";
+        if ("routine".equals(type)) return "本测评主要反映作息规律和晚睡情况。";
+        if ("daytime_fatigue".equals(type)) return "本测评主要反映日间疲劳和精力恢复情况。";
+        if ("academic".equals(type)) return "本测评主要反映学习压力和学业负荷。";
+        if ("exam_anxiety".equals(type)) return "本测评主要反映考试相关紧张和发挥受影响情况。";
+        if ("learning_motivation".equals(type)) return "本测评主要反映学习目标感和持续投入中的困难。";
+        if ("time_management".equals(type)) return "本测评主要反映计划安排、拖延和任务完成效率。";
+        if ("social".equals(type)) return "本测评主要反映社交场景中的紧张程度。";
+        if ("relationship".equals(type)) return "本测评主要反映人际关系支持和冲突状态。";
+        if ("support".equals(type)) return "本测评主要反映人际支持感和求助表达情况。";
+        if ("dorm_relationship".equals(type)) return "本测评主要反映宿舍生活适应和边界沟通情况。";
+        if ("communication".equals(type)) return "本测评主要反映沟通表达和处理分歧中的困难。";
+        if ("emotion_regulation".equals(type)) return "本测评主要反映情绪识别和调节中的困难。";
+        if ("self_esteem".equals(type)) return "本测评主要反映自我评价和自我接纳中的困扰。";
+        if ("resilience".equals(type)) return "本测评主要反映面对压力和挫折时的恢复困难。";
+        if ("self_efficacy".equals(type)) return "本测评主要反映任务信心和掌控感不足情况。";
+        if ("life_satisfaction".equals(type)) return "本测评主要反映近期整体生活满意度相关困扰。";
+        return "";
     }
 }

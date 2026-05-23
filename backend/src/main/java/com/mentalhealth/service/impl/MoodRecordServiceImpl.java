@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -49,7 +50,23 @@ public class MoodRecordServiceImpl extends ServiceImpl<MoodRecordMapper, MoodRec
     @Override
     public Map<String, Object> getMoodSummary(Long userId, Integer days) {
         Map<String, Object> summary = moodRecordMapper.selectMoodSummary(userId, days);
-        // 补充最常情绪
+        if (summary == null) {
+            summary = new HashMap<>();
+        }
+
+        summary.putIfAbsent("totalRecords", 0);
+        summary.putIfAbsent("avgScore", null);
+        summary.putIfAbsent("maxScore", null);
+        summary.putIfAbsent("minScore", null);
+        summary.putIfAbsent("activeDays", 0);
+
+        if (summary.get("totalRecords") == null) {
+            summary.put("totalRecords", 0);
+        }
+        if (summary.get("activeDays") == null) {
+            summary.put("activeDays", 0);
+        }
+
         Map<String, Object> topMood = moodRecordMapper.selectTopMood(userId, days);
         if (topMood != null) {
             summary.put("topMood", topMood.get("topMood"));

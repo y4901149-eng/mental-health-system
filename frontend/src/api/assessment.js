@@ -34,3 +34,11 @@ export function getUserRecords() {
     method: 'get'
   })
 }
+
+/** 获取单次测评结果详情 */
+export function getAssessmentRecord(id) {
+  return request({
+    url: '/assessment/record/' + id,
+    method: 'get'
+  })
+}
