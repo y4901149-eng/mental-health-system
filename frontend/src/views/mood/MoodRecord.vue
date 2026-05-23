@@ -3,7 +3,7 @@
     <section class="module-header">
       <div>
         <h1>每日情绪记录</h1>
-        <p>记录当天主要情绪和评分，用于后续趋势分析。</p>
+        <p>记录当天不同时间的情绪变化，用于后续趋势分析。</p>
       </div>
       <el-button plain @click="$router.push('/mood/chart')">
         <i class="el-icon-data-line"></i>
@@ -12,25 +12,45 @@
     </section>
 
     <el-card shadow="never" class="status-card" v-loading="loadingToday">
-      <div class="status-content">
-        <div>
-          <span class="status-label">今日状态</span>
-          <h2>{{ hasTodayRecord ? '已完成记录' : '未完成记录' }}</h2>
-          <p v-if="hasTodayRecord">
-            {{ selectedMood.label }}，{{ moodScore }} 分<span v-if="recordTime">，{{ recordTime }}</span>
-          </p>
-          <p v-else>请选择当前最接近的情绪状态，并完成评分。</p>
+      <div class="status-grid">
+        <div class="status-copy">
+          <span class="section-kicker">今日状态</span>
+          <h2>{{ statusTitle }}</h2>
+          <p>{{ statusDescription }}</p>
         </div>
-        <el-tag :type="hasTodayRecord ? 'success' : 'info'" effect="plain">
-          {{ hasTodayRecord ? '已记录' : '待记录' }}
-        </el-tag>
+        <div class="status-metrics">
+          <div class="metric-item">
+            <span>今日记录</span>
+            <strong>{{ todayRecordCount }} 次</strong>
+          </div>
+          <div class="metric-item">
+            <span>今日平均分</span>
+            <strong>{{ todayAvgScore }}</strong>
+          </div>
+          <div class="metric-item">
+            <span>最近情绪</span>
+            <strong>{{ latestMoodLabel }}</strong>
+          </div>
+          <div class="metric-item">
+            <span>最近时间</span>
+            <strong>{{ latestRecordTime || '--' }}</strong>
+          </div>
+        </div>
       </div>
     </el-card>
 
     <el-card shadow="never" class="form-card">
+      <div class="card-heading">
+        <div>
+          <span class="section-kicker">新增记录</span>
+          <h3>记录当前情绪</h3>
+        </div>
+        <span>同一天可连续记录多次</span>
+      </div>
+
       <div class="section-title">
-        <h3>主要情绪</h3>
-        <span>选择一个最接近的状态</span>
+        <h4>情绪类型</h4>
+        <span>选择当前最接近的状态</span>
       </div>
 
       <div class="mood-grid">
@@ -49,7 +69,7 @@
 
       <div class="score-panel">
         <div class="section-title compact">
-          <h3>情绪评分</h3>
+          <h4>情绪评分</h4>
           <span>{{ scoreLabel }}：{{ scoreDescription }}</span>
         </div>
         <div class="score-main">
@@ -66,8 +86,8 @@
 
       <div class="note-panel">
         <div class="section-title compact">
-          <h3>备注</h3>
-          <span>可简单记录当天事件或状态，选填</span>
+          <h4>备注</h4>
+          <span>可简单记录事件或状态，选填</span>
         </div>
         <el-input
           v-model="note"
@@ -75,18 +95,47 @@
           :rows="4"
           maxlength="300"
           show-word-limit
-          placeholder="例如：今天课程较多，下午有些疲惫。">
+          placeholder="例如：考试前有点紧张，复习结束后状态稳定。">
         </el-input>
       </div>
 
       <div class="action-row">
         <el-button type="primary" :loading="submitting" @click="save">
-          {{ hasTodayRecord ? '更新记录' : '保存记录' }}
+          保存记录
         </el-button>
       </div>
     </el-card>
 
-    <div class="note-tip">持续记录可以帮助你观察压力变化和情绪波动，但记录本身不替代专业评估。</div>
+    <el-card shadow="never" class="records-card" v-loading="loadingToday">
+      <div slot="header" class="panel-header">
+        <div>
+          <strong>今日记录列表</strong>
+          <span>最新记录在前</span>
+        </div>
+        <el-tag size="small" effect="plain">{{ todayRecordCount }} 条</el-tag>
+      </div>
+
+      <div v-if="todayRecords.length" class="record-list">
+        <div v-for="record in todayRecords" :key="record.id || record.createTime" class="record-item">
+          <div class="record-time">{{ formatTime(record.createTime) || '--:--' }}</div>
+          <div class="record-body">
+            <div class="record-title">
+              <strong>{{ getMoodLabel(record.moodTag) }}</strong>
+              <span>{{ formatScore(record.moodScore) }} 分</span>
+            </div>
+            <p>{{ formatNote(record.note) }}</p>
+          </div>
+        </div>
+      </div>
+
+      <el-empty
+        v-else
+        description="今日暂无记录，可以添加一次情绪记录。"
+        :image-size="96">
+      </el-empty>
+    </el-card>
+
+    <div class="note-tip">持续记录可以帮助观察情绪变化，但记录本身不替代专业评估。</div>
   </div>
 </template>
 
@@ -108,7 +157,12 @@ export default {
     return {
       loadingToday: false,
       submitting: false,
-      todayRecord: null,
+      todayStats: {
+        totalRecords: 0,
+        avgScore: null,
+        latestRecord: null,
+        records: []
+      },
       moodScore: 5,
       moodTag: 'calm',
       note: '',
@@ -122,11 +176,38 @@ export default {
     }
   },
   computed: {
-    hasTodayRecord() {
-      return !!this.todayRecord
+    todayRecords() {
+      return Array.isArray(this.todayStats.records) ? this.todayStats.records : []
     },
-    selectedMood() {
-      return this.moodOptions.find(item => item.value === this.moodTag) || this.moodOptions[1]
+    todayRecordCount() {
+      return Number(this.todayStats.totalRecords || this.todayRecords.length || 0)
+    },
+    hasTodayRecord() {
+      return this.todayRecordCount > 0
+    },
+    latestRecord() {
+      return this.todayStats.latestRecord || this.todayRecords[0] || null
+    },
+    statusTitle() {
+      return this.hasTodayRecord ? '今日已记录情绪变化' : '今日暂无记录'
+    },
+    statusDescription() {
+      if (!this.hasTodayRecord) return '今日暂无记录，可以添加一次情绪记录。'
+      return '可继续记录新的情绪，用于观察一天内的状态变化。'
+    },
+    todayAvgScore() {
+      if (this.todayStats.avgScore === null || this.todayStats.avgScore === undefined || this.todayStats.avgScore === '') {
+        return '--'
+      }
+      return Number(this.todayStats.avgScore).toFixed(1)
+    },
+    latestMoodLabel() {
+      if (!this.latestRecord) return '--'
+      return this.getMoodLabel(this.latestRecord.moodTag)
+    },
+    latestRecordTime() {
+      if (!this.latestRecord) return ''
+      return this.formatTime(this.latestRecord.createTime)
     },
     scoreLabel() {
       if (this.moodScore <= 3) return '较低'
@@ -136,13 +217,9 @@ export default {
     },
     scoreDescription() {
       if (this.moodScore <= 3) return '建议适当休息并关注压力来源'
-      if (this.moodScore <= 5) return '可能存在波动，可继续观察'
+      if (this.moodScore <= 5) return '存在一定波动，可继续观察'
       if (this.moodScore <= 7) return '整体处于可调节状态'
       return '当前状态较好，注意保持'
-    },
-    recordTime() {
-      if (!this.todayRecord || !this.todayRecord.createTime) return ''
-      return this.formatTime(this.todayRecord.createTime)
     }
   },
   created() {
@@ -151,42 +228,65 @@ export default {
   methods: {
     fetchTodayMood() {
       this.loadingToday = true
-      getTodayMood().then(res => {
-        this.todayRecord = res.data || null
-        if (this.todayRecord) {
-          this.moodScore = this.todayRecord.moodScore || 5
-          this.moodTag = this.todayRecord.moodTag || 'calm'
-          this.note = this.todayRecord.note || ''
-        }
+      return getTodayMood().then(res => {
+        this.todayStats = this.normalizeTodayStats(res.data)
       }).catch(() => {
+        this.todayStats = this.normalizeTodayStats({})
         this.$message.warning('今日记录读取失败，请稍后重试。')
       }).finally(() => {
         this.loadingToday = false
       })
     },
+    normalizeTodayStats(data) {
+      const source = data || {}
+      const legacyRecord = source.id ? source : null
+      const records = Array.isArray(source.records)
+        ? source.records
+        : (legacyRecord ? [legacyRecord] : [])
+      return {
+        totalRecords: Number(source.totalRecords !== undefined && source.totalRecords !== null ? source.totalRecords : records.length),
+        avgScore: source.avgScore !== undefined ? source.avgScore : this.calculateAverage(records),
+        latestRecord: source.latestRecord || records[0] || null,
+        records
+      }
+    },
     save() {
-      const existed = this.hasTodayRecord
       this.submitting = true
       recordMood({
         moodScore: this.moodScore,
         moodTag: this.moodTag,
         note: this.note
       }).then(() => {
-        this.todayRecord = {
-          moodScore: this.moodScore,
-          moodTag: this.moodTag,
-          note: this.note,
-          createTime: new Date().toISOString()
-        }
-        this.$message.success(existed ? '记录已更新。' : '记录已保存。')
+        this.$message.success('记录已保存。')
+        this.note = ''
+        return this.fetchTodayMood()
       }).catch(() => {
-        this.$message.error('保存失败，请稍后重试。')
+        this.$message.error('保存失败，请检查网络后稍后重试。')
       }).finally(() => {
         this.submitting = false
       })
     },
+    calculateAverage(records) {
+      const scoredRecords = records.filter(item => item.moodScore !== null && item.moodScore !== undefined)
+      if (!scoredRecords.length) return null
+      const total = scoredRecords.reduce((sum, item) => sum + Number(item.moodScore || 0), 0)
+      return total / scoredRecords.length
+    },
+    getMoodLabel(value) {
+      const option = this.moodOptions.find(item => item.value === value)
+      return option ? option.label : '未知'
+    },
+    formatScore(value) {
+      if (value === null || value === undefined || value === '') return '--'
+      return value
+    },
+    formatNote(value) {
+      return value && String(value).trim() ? value : '未填写备注'
+    },
     formatTime(value) {
-      const date = new Date(value)
+      if (!value) return ''
+      const normalized = typeof value === 'string' ? value.replace(' ', 'T') : value
+      const date = new Date(normalized)
       if (Number.isNaN(date.getTime())) return ''
       const hour = String(date.getHours()).padStart(2, '0')
       const minute = String(date.getMinutes()).padStart(2, '0')
@@ -198,7 +298,7 @@ export default {
 
 <style scoped>
 .mood-record-page {
-  max-width: 920px;
+  max-width: 980px;
   margin: 0 auto;
   padding: 28px 24px 44px;
 }
@@ -213,49 +313,123 @@ export default {
 
 .module-header h1 {
   margin: 0;
-  color: #2c3e50;
+  color: #243447;
   font-size: 26px;
+  font-weight: 700;
 }
 
 .module-header p {
   margin: 8px 0 0;
-  color: #6f7d8f;
+  color: #6b7787;
   font-size: 14px;
+  line-height: 1.6;
 }
 
 .status-card,
-.form-card {
-  border: 1px solid #dfe7f1;
-  border-radius: 6px;
+.form-card,
+.records-card {
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
   margin-bottom: 18px;
 }
 
-.status-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
+.status-card ::v-deep .el-card__body {
+  padding: 22px;
 }
 
-.status-label {
-  color: #7a8798;
+.status-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(360px, 1.45fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.section-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: #6d7b8d;
   font-size: 13px;
+  font-weight: 600;
 }
 
-.status-content h2 {
-  margin: 6px 0;
-  color: #2c3e50;
-  font-size: 20px;
+.status-copy h2 {
+  margin: 0 0 8px;
+  color: #243447;
+  font-size: 22px;
 }
 
-.status-content p {
+.status-copy p {
   margin: 0;
-  color: #606266;
+  color: #5d6878;
   font-size: 14px;
+  line-height: 1.7;
+}
+
+.status-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid #e4eaf1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fafbfc;
+}
+
+.metric-item {
+  min-width: 0;
+  padding: 14px 12px;
+  border-right: 1px solid #e4eaf1;
+}
+
+.metric-item:last-child {
+  border-right: 0;
+}
+
+.metric-item span {
+  display: block;
+  color: #718096;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.metric-item strong {
+  display: block;
+  color: #243447;
+  font-size: 18px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .form-card ::v-deep .el-card__body {
   padding: 24px;
+}
+
+.card-heading,
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.card-heading {
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.card-heading h3 {
+  margin: 0;
+  color: #243447;
+  font-size: 18px;
+}
+
+.card-heading > span,
+.panel-header span {
+  color: #7a8798;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .section-title {
@@ -266,10 +440,10 @@ export default {
   margin-bottom: 14px;
 }
 
-.section-title h3 {
+.section-title h4 {
   margin: 0;
-  color: #2c3e50;
-  font-size: 16px;
+  color: #243447;
+  font-size: 15px;
 }
 
 .section-title span {
@@ -289,9 +463,9 @@ export default {
 }
 
 .mood-option {
-  min-height: 92px;
-  border: 1px solid #dfe7f1;
-  border-radius: 4px;
+  min-height: 88px;
+  border: 1px solid #d8e0ea;
+  border-radius: 6px;
   background: #fff;
   cursor: pointer;
   display: grid;
@@ -301,6 +475,11 @@ export default {
   align-items: center;
   padding: 14px;
   text-align: left;
+  transition: border-color .16s ease, background-color .16s ease;
+}
+
+.mood-option:hover {
+  border-color: #9fb4cc;
 }
 
 .mood-option i {
@@ -310,28 +489,29 @@ export default {
 }
 
 .mood-option strong {
-  color: #2c3e50;
+  color: #243447;
   font-size: 15px;
 }
 
 .mood-option span {
-  color: #909399;
+  color: #8792a2;
   font-size: 12px;
 }
 
 .mood-option.active {
-  border-color: #409eff;
-  background: #f6faff;
+  border-color: #2f6f9f;
+  background: #f5f9fc;
 }
 
-.mood-option.active i {
-  color: #409eff;
+.mood-option.active i,
+.mood-option.active strong {
+  color: #2f6f9f;
 }
 
 .score-panel {
   background: #f8fafc;
-  border: 1px solid #edf1f7;
-  border-radius: 4px;
+  border: 1px solid #e4eaf1;
+  border-radius: 6px;
   padding: 18px;
   margin-bottom: 22px;
 }
@@ -346,9 +526,9 @@ export default {
 .score-number {
   width: 58px;
   height: 58px;
-  border: 1px solid #dfe7f1;
+  border: 1px solid #d8e0ea;
   background: #fff;
-  color: #2c3e50;
+  color: #243447;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -369,14 +549,94 @@ export default {
   min-width: 128px;
 }
 
-.note-tip {
-  color: #7a8798;
+.panel-header strong {
+  display: block;
+  color: #243447;
+  font-size: 15px;
+  margin-bottom: 3px;
+}
+
+.record-list {
+  display: grid;
+  gap: 12px;
+}
+
+.record-item {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #e4eaf1;
+  border-radius: 6px;
   background: #fff;
-  border: 1px solid #dfe7f1;
+}
+
+.record-time {
+  color: #2f6f9f;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.record-body {
+  min-width: 0;
+}
+
+.record-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.record-title strong {
+  color: #243447;
+  font-size: 15px;
+}
+
+.record-title span {
+  color: #5d6878;
+  font-size: 13px;
+  background: #f3f6f9;
+  border: 1px solid #e4eaf1;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.record-body p {
+  margin: 0;
+  color: #606f80;
+  font-size: 13px;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.note-tip {
+  color: #6b7787;
+  background: #fff;
+  border: 1px solid #d8e0ea;
   border-radius: 6px;
   padding: 12px 14px;
   font-size: 13px;
   line-height: 1.7;
+}
+
+@media (max-width: 860px) {
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .status-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric-item:nth-child(2) {
+    border-right: 0;
+  }
+
+  .metric-item:nth-child(-n + 2) {
+    border-bottom: 1px solid #e4eaf1;
+  }
 }
 
 @media (max-width: 760px) {
@@ -385,8 +645,9 @@ export default {
   }
 
   .module-header,
-  .status-content,
-  .section-title {
+  .card-heading,
+  .section-title,
+  .panel-header {
     flex-direction: column;
     align-items: stretch;
   }
@@ -400,9 +661,21 @@ export default {
   }
 }
 
-@media (max-width: 460px) {
-  .mood-grid {
+@media (max-width: 500px) {
+  .mood-grid,
+  .status-metrics,
+  .record-item {
     grid-template-columns: 1fr;
+  }
+
+  .metric-item,
+  .metric-item:nth-child(2) {
+    border-right: 0;
+    border-bottom: 1px solid #e4eaf1;
+  }
+
+  .metric-item:last-child {
+    border-bottom: 0;
   }
 }
 </style>

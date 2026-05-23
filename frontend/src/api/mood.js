@@ -2,7 +2,7 @@
 
 import request from '@/utils/request'
 
-/** 记录今日情绪 */
+/** 新增一条情绪记录 */
 export function recordMood(data) {
   return request({
     url: '/mood/record',
@@ -38,10 +38,19 @@ export function getMoodSummary(days) {
   })
 }
 
-/** 获取今日情绪记录 */
+/** 获取今日情绪统计和记录列表 */
 export function getTodayMood() {
   return request({
     url: '/mood/today',
     method: 'get'
+  })
+}
+
+/** 获取最近一段时间的情绪记录 */
+export function getMoodRecords(days) {
+  return request({
+    url: '/mood/records',
+    method: 'get',
+    params: { days: days || 30 }
   })
 }
