@@ -106,7 +106,10 @@
           <!-- 用户信息 -->
           <el-dropdown trigger="click" @command="handleCommand">
             <div class="header-user">
-              <div class="user-avatar">{{ userInitial }}</div>
+              <div class="user-avatar">
+                <img v-if="userInfo && userInfo.avatar" :src="userInfo.avatar" alt="用户头像" />
+                <span v-else>{{ userInitial }}</span>
+              </div>
               <div class="user-meta">
                 <span class="user-name">{{ userInfo ? userInfo.nickname : '用户' }}</span>
                 <span class="user-role">{{ userInfo && userInfo.role === 'admin' ? '管理员' : '用户' }}</span>
@@ -182,7 +185,7 @@ export default {
           this.$message.success('已安全退出')
         }).catch(() => {})
       } else if (command === 'profile') {
-        this.$message.info('个人信息功能开发中')
+        if (this.$route.path !== '/profile') this.$router.push('/profile')
       }
     }
   }
@@ -388,6 +391,14 @@ export default {
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .user-meta {

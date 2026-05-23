@@ -1,9 +1,5 @@
-// 用户相关 API
-// 作用：封装登录、注册、获取用户信息等后端接口调用
-
 import request from '@/utils/request'
 
-/** 登录 */
 export function login(data) {
   return request({
     url: '/user/login',
@@ -12,7 +8,6 @@ export function login(data) {
   })
 }
 
-/** 注册 */
 export function register(data) {
   return request({
     url: '/user/register',
@@ -21,7 +16,6 @@ export function register(data) {
   })
 }
 
-/** 获取当前登录用户信息 */
 export function getUserInfo() {
   return request({
     url: '/user/info',
@@ -29,7 +23,6 @@ export function getUserInfo() {
   })
 }
 
-/** 更新用户个人信息 */
 export function updateProfile(data) {
   return request({
     url: '/user/update',
@@ -38,7 +31,19 @@ export function updateProfile(data) {
   })
 }
 
-/** 修改密码 */
+export function uploadAvatar(file) {
+  const data = new FormData()
+  data.append('file', file)
+  return request({
+    url: '/user/avatar',
+    method: 'post',
+    data,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
 export function changePassword(data) {
   return request({
     url: '/user/password',

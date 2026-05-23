@@ -8,44 +8,30 @@ import com.mentalhealth.vo.ResultVO;
 import com.mentalhealth.vo.UserVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import java.io.IOException;
+import java.util.Base64;
 import java.util.Map;
 
-/**
- * 用户 Controller
- * 作用：处理登录、注册、获取用户信息等请求
- * 路径：/api/user/*
- * 说明：登录和注册不拦截（在 WebMvcConfig 中排除了），其他接口需要 JWT token
- */
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
 
+    private static final long MAX_AVATAR_SIZE = 2 * 1024 * 1024;
+
     @Autowired
     private UserService userService;
 
-    /**
-     * 用户登录
-     * POST /api/user/login
-     * 请求体：{ "username": "xxx", "password": "xxx" }
-     * 返回：{ code: 200, data: { id, username, nickname, role, token } }
-     */
     @PostMapping("/login")
     public ResultVO<UserVO> login(@Valid @RequestBody LoginDTO loginDTO) {
-        UserVO userVO = userService.login(loginDTO.getUsername(), loginDTO.getPassword());
-        return ResultVO.success(userVO);
+        return ResultVO.success(userService.login(loginDTO.getUsername(), loginDTO.getPassword()));
     }
 
-    /**
-     * 用户注册
-     * POST /api/user/register
-     * 请求体：{ "username": "xxx", "password": "xxx", "confirmPassword": "xxx", "nickname": "xxx" }
-     */
     @PostMapping("/register")
     public ResultVO<UserVO> register(@Valid @RequestBody RegisterDTO registerDTO) {
-        // 检查两次密码是否一致
         if (!registerDTO.getPassword().equals(registerDTO.getConfirmPassword())) {
             return ResultVO.badRequest("两次密码不一致");
         }
@@ -58,34 +44,38 @@ public class UserController {
         return ResultVO.success(userVO);
     }
 
-    /**
-     * 获取当前登录用户信息
-     * GET /api/user/info
-     * 请求头需要带 Authorization: Bearer xxx
-     */
     @GetMapping("/info")
     public ResultVO<UserVO> info(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
-        UserVO userVO = userService.getUserVOById(userId);
-        return ResultVO.success(userVO);
+        return ResultVO.success(userService.getUserVOById(userId));
     }
 
-    /**
-     * 更新个人信息
-     * PUT /api/user/update
-     */
     @PutMapping("/update")
-    public ResultVO<?> update(@RequestBody User user, HttpServletRequest request) {
+    public ResultVO<UserVO> update(@RequestBody User user, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         user.setId(userId);
         userService.updateProfile(user);
-        return ResultVO.success();
+        return ResultVO.success(userService.getUserVOById(userId));
     }
 
-    /**
-     * 修改密码
-     * PUT /api/user/password
-     */
+    @PostMapping("/avatar")
+    public ResultVO<UserVO> uploadAvatar(@RequestParam("file") MultipartFile file, HttpServletRequest request) throws IOException {
+        if (file == null || file.isEmpty()) {
+            return ResultVO.badRequest("请选择头像图片");
+        }
+        if (file.getSize() > MAX_AVATAR_SIZE) {
+            return ResultVO.badRequest("头像图片不能超过2MB");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            return ResultVO.badRequest("只支持图片文件");
+        }
+
+        Long userId = (Long) request.getAttribute("userId");
+        String dataUrl = "data:" + contentType + ";base64," + Base64.getEncoder().encodeToString(file.getBytes());
+        return ResultVO.success(userService.updateAvatar(userId, dataUrl));
+    }
+
     @PutMapping("/password")
     public ResultVO<?> changePassword(@RequestBody Map<String, String> body, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");

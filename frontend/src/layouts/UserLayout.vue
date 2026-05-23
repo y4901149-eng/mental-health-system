@@ -31,7 +31,10 @@
         <div class="header-right">
           <el-dropdown trigger="click" @command="handleCommand">
             <div class="header-user">
-              <div class="user-avatar">{{ userInitial }}</div>
+              <div class="user-avatar">
+                <img v-if="userInfo && userInfo.avatar" :src="userInfo.avatar" alt="用户头像" />
+                <span v-else>{{ userInitial }}</span>
+              </div>
               <div class="user-meta">
                 <span class="user-name">{{ userInfo ? userInfo.nickname : '用户' }}</span>
                 <span class="user-role">用户</span>
@@ -75,7 +78,7 @@ export default {
           .then(() => { this.$store.dispatch('logout'); this.$router.push('/login'); this.$message.success('已安全退出') })
           .catch(() => {})
       } else if (command === 'profile') {
-        this.$message.info('个人信息功能开发中')
+        if (this.$route.path !== '/profile') this.$router.push('/profile')
       }
     }
   }
@@ -110,7 +113,8 @@ export default {
 .header-right { display: flex; align-items: center; gap: 20px; }
 .header-user { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 4px 10px 4px 4px; border-radius: 30px; transition: background 0.2s; }
 .header-user:hover { background: #F0F5FF; }
-.user-avatar { width: 34px; height: 34px; background: linear-gradient(135deg,#409EFF,#6C63FF); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; }
+.user-avatar { width: 34px; height: 34px; background: linear-gradient(135deg,#409EFF,#6C63FF); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; overflow: hidden; }
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .user-meta { display: flex; flex-direction: column; line-height: 1.3; }
 .user-name { font-size: 13px; font-weight: 600; color: #2C3E50; }
 .user-role { font-size: 11px; color: #909399; }
