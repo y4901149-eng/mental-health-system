@@ -7,14 +7,20 @@ import com.mentalhealth.service.UserService;
 import com.mentalhealth.vo.ResultVO;
 import com.mentalhealth.vo.UserVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.io.IOException;
-import java.util.Base64;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/user")
@@ -24,6 +30,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Value("${upload.dir:${user.dir}/uploads}")
+    private String uploadDir;
 
     @PostMapping("/login")
     public ResultVO<UserVO> login(@Valid @RequestBody LoginDTO loginDTO) {
@@ -72,8 +81,32 @@ public class UserController {
         }
 
         Long userId = (Long) request.getAttribute("userId");
-        String dataUrl = "data:" + contentType + ";base64," + Base64.getEncoder().encodeToString(file.getBytes());
-        return ResultVO.success(userService.updateAvatar(userId, dataUrl));
+        String extension = getImageExtension(file.getOriginalFilename(), contentType);
+        if (extension == null) {
+            return ResultVO.badRequest("只支持 JPG、PNG、WebP 图片");
+        }
+
+        Path avatarDir = Paths.get(uploadDir, "avatars");
+        Files.createDirectories(avatarDir);
+
+        String fileName = userId + "-" + UUID.randomUUID() + extension;
+        Path target = avatarDir.resolve(fileName);
+        Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+
+        String avatarUrl = "/uploads/avatars/" + fileName;
+        return ResultVO.success(userService.updateAvatar(userId, avatarUrl));
+    }
+
+    private String getImageExtension(String originalName, String contentType) {
+        String name = originalName == null ? "" : originalName.toLowerCase(Locale.ROOT);
+        if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return ".jpg";
+        if (name.endsWith(".png")) return ".png";
+        if (name.endsWith(".webp")) return ".webp";
+
+        if ("image/jpeg".equalsIgnoreCase(contentType)) return ".jpg";
+        if ("image/png".equalsIgnoreCase(contentType)) return ".png";
+        if ("image/webp".equalsIgnoreCase(contentType)) return ".webp";
+        return null;
     }
 
     @PutMapping("/password")
