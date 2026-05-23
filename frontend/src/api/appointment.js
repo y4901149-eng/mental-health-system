@@ -1,4 +1,4 @@
-// 心理咨询预约相关 API
+// 心理咨询预约 API
 
 import request from '@/utils/request'
 

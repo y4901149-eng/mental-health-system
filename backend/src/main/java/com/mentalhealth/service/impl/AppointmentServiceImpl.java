@@ -7,6 +7,7 @@ import com.mentalhealth.mapper.AppointmentMapper;
 import com.mentalhealth.service.AppointmentService;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -15,9 +16,28 @@ import java.util.List;
 @Service
 public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appointment> implements AppointmentService {
 
+    private static final List<String> ACTIVE_STATUSES = Arrays.asList("pending", "confirmed");
+
     @Override
     public void createAppointment(Appointment appointment) {
-        appointment.setStatus("pending"); // 初始状态：待确认
+        validateAppointment(appointment);
+
+        long duplicateCount = count(new LambdaQueryWrapper<Appointment>()
+                .eq(Appointment::getUserId, appointment.getUserId())
+                .eq(Appointment::getCounselorName, appointment.getCounselorName())
+                .eq(Appointment::getAppointmentDate, appointment.getAppointmentDate())
+                .eq(Appointment::getTimeSlot, appointment.getTimeSlot())
+                .in(Appointment::getStatus, ACTIVE_STATUSES));
+        if (duplicateCount > 0) {
+            throw new RuntimeException("该时间段已有预约，请勿重复提交");
+        }
+
+        appointment.setCounselorName(appointment.getCounselorName().trim());
+        appointment.setAppointmentDate(appointment.getAppointmentDate().trim());
+        appointment.setTimeSlot(appointment.getTimeSlot().trim());
+        appointment.setType(isBlank(appointment.getType()) ? "individual" : appointment.getType().trim());
+        appointment.setRemark(isBlank(appointment.getRemark()) ? null : appointment.getRemark().trim());
+        appointment.setStatus("pending");
         save(appointment);
     }
 
@@ -36,6 +56,9 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
         }
         if (!appointment.getUserId().equals(userId)) {
             throw new RuntimeException("无权操作此预约");
+        }
+        if (!ACTIVE_STATUSES.contains(appointment.getStatus())) {
+            throw new RuntimeException("当前状态不可取消");
         }
         appointment.setStatus("cancelled");
         updateById(appointment);
@@ -57,5 +80,24 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
             appointment.setStatus("completed");
             updateById(appointment);
         }
+    }
+
+    private void validateAppointment(Appointment appointment) {
+        if (appointment.getUserId() == null) {
+            throw new RuntimeException("用户信息不能为空");
+        }
+        if (isBlank(appointment.getCounselorName())) {
+            throw new RuntimeException("请选择咨询师");
+        }
+        if (isBlank(appointment.getAppointmentDate())) {
+            throw new RuntimeException("请选择预约日期");
+        }
+        if (isBlank(appointment.getTimeSlot())) {
+            throw new RuntimeException("请选择时间段");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

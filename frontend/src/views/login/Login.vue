@@ -58,7 +58,9 @@
               v-model="form.username"
               :placeholder="isLoginMode ? '请输入用户名' : '请设置用户名（3-20位）'"
               prefix-icon="el-icon-user"
+              autocomplete="username"
               size="large"
+              @keyup.enter.native="handleSubmit"
             />
           </el-form-item>
 
@@ -70,7 +72,9 @@
               :placeholder="isLoginMode ? '请输入密码' : '请设置密码（至少6位）'"
               prefix-icon="el-icon-lock"
               show-password
+              :autocomplete="isLoginMode ? 'current-password' : 'new-password'"
               size="large"
+              @keyup.enter.native="handleSubmit"
             />
           </el-form-item>
 
@@ -82,7 +86,9 @@
               placeholder="请再次输入密码"
               prefix-icon="el-icon-lock"
               show-password
+              autocomplete="new-password"
               size="large"
+              @keyup.enter.native="handleSubmit"
             />
           </el-form-item>
 
@@ -93,8 +99,25 @@
               placeholder="请输入昵称（选填）"
               prefix-icon="el-icon-edit"
               size="large"
+              @keyup.enter.native="handleSubmit"
             />
           </el-form-item>
+
+          <!-- 邮箱（注册模式） -->
+          <el-form-item prop="email" v-if="!isLoginMode">
+            <el-input
+              v-model.trim="form.email"
+              placeholder="请输入邮箱（选填）"
+              prefix-icon="el-icon-message"
+              autocomplete="email"
+              size="large"
+              @keyup.enter.native="handleSubmit"
+            />
+          </el-form-item>
+
+          <div v-if="isLoginMode" class="login-options">
+            <el-checkbox v-model="rememberUsername">记住用户名</el-checkbox>
+          </div>
 
           <!-- 提交按钮 -->
           <el-form-item>
@@ -129,6 +152,8 @@
 <script>
 import { register } from '@/api/user'
 
+const REMEMBER_USERNAME_KEY = 'mental_health_remember_username'
+
 export default {
   name: 'Login',
   data() {
@@ -139,8 +164,10 @@ export default {
         username: '',
         password: '',
         confirmPassword: '',
-        nickname: ''
-      }
+        nickname: '',
+        email: ''
+      },
+      rememberUsername: false
     }
   },
 
@@ -171,9 +198,20 @@ export default {
             trigger: 'blur'
           }
         ]
+        baseRules.email = [
+          { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+        ]
       }
 
       return baseRules
+    }
+  },
+
+  created() {
+    const rememberedUsername = localStorage.getItem(REMEMBER_USERNAME_KEY)
+    if (rememberedUsername) {
+      this.form.username = rememberedUsername
+      this.rememberUsername = true
     }
   },
 
@@ -181,6 +219,9 @@ export default {
     switchMode() {
       this.isLoginMode = !this.isLoginMode
       this.$refs.form.resetFields()
+      if (this.isLoginMode && this.rememberUsername) {
+        this.form.username = localStorage.getItem(REMEMBER_USERNAME_KEY) || ''
+      }
     },
 
     handleSubmit() {
@@ -194,6 +235,7 @@ export default {
             username: this.form.username,
             password: this.form.password
           }).then(() => {
+            this.saveRememberedUsername()
             this.$message.success('登录成功！')
             this.$router.push('/home').catch(() => {})
           }).catch(() => {}).finally(() => {
@@ -204,17 +246,27 @@ export default {
             username: this.form.username,
             password: this.form.password,
             confirmPassword: this.form.confirmPassword,
-            nickname: this.form.nickname || undefined
+            nickname: this.form.nickname || undefined,
+            email: this.form.email || undefined
           }).then(() => {
             this.$message.success('注册成功！请登录')
             this.isLoginMode = true
             this.form.password = ''
             this.form.confirmPassword = ''
+            this.form.email = ''
           }).catch(() => {}).finally(() => {
             this.submitting = false
           })
         }
       })
+    },
+
+    saveRememberedUsername() {
+      if (this.rememberUsername) {
+        localStorage.setItem(REMEMBER_USERNAME_KEY, this.form.username.trim())
+      } else {
+        localStorage.removeItem(REMEMBER_USERNAME_KEY)
+      }
     }
   }
 }
@@ -227,7 +279,9 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #EAF3FF 0%, #F0F5FF 50%, #EDF0FF 100%);
+  background:
+    linear-gradient(135deg, rgba(64, 158, 255, 0.11) 0%, rgba(103, 194, 58, 0.08) 100%),
+    #f4f8fb;
   position: relative;
   overflow: hidden;
 }
@@ -237,11 +291,15 @@ export default {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.42;
 }
 
 .circle {
-  position: absolute;
-  border-radius: 50%;
+  display: none;
 }
 
 .c1 {
@@ -271,9 +329,10 @@ export default {
 /* ===== 主容器 ===== */
 .login-wrapper {
   display: flex;
-  background: #FFFFFF;
-  border-radius: 16px;
-  box-shadow: 0 8px 40px rgba(64, 158, 255, 0.10);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(219, 232, 248, 0.95);
+  border-radius: 22px;
+  box-shadow: 0 24px 64px rgba(41, 80, 130, 0.16);
   overflow: hidden;
   width: 880px;
   max-width: 94vw;
@@ -285,11 +344,22 @@ export default {
 /* ===== 左侧品牌区 ===== */
 .brand-panel {
   width: 400px;
-  background: linear-gradient(135deg, #409EFF 0%, #6C63FF 100%);
+  background:
+    linear-gradient(145deg, rgba(40, 125, 218, 0.94) 0%, rgba(48, 152, 160, 0.92) 100%),
+    #2678d9;
   padding: 48px 40px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  position: relative;
+}
+
+.brand-panel::after {
+  content: "";
+  position: absolute;
+  inset: auto 32px 32px 32px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .brand-content {
@@ -297,7 +367,15 @@ export default {
 }
 
 .brand-icon {
-  font-size: 48px;
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
   margin-bottom: 16px;
 }
 
@@ -326,6 +404,7 @@ export default {
   gap: 10px;
   font-size: 14px;
   opacity: 0.9;
+  padding: 9px 0;
 }
 
 .bf-icon {
@@ -356,9 +435,9 @@ export default {
 }
 
 .form-header h2 {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
-  color: #2C3E50;
+  color: #24364b;
   margin-bottom: 6px;
 }
 
@@ -380,6 +459,23 @@ export default {
 .login-form :deep(.el-input__inner) {
   height: 46px !important;
   font-size: 14px;
+  border-radius: 12px;
+  border-color: #dbe8f8;
+  background: #fbfdff;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.login-form :deep(.el-input__inner:focus) {
+  border-color: #409eff;
+  box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.12);
+}
+
+.login-options {
+  display: flex;
+  justify-content: flex-start;
+  max-width: 360px;
+  margin: -4px auto 14px;
+  color: #7b8ca5;
 }
 
 .submit-btn {
@@ -387,8 +483,9 @@ export default {
   height: 46px !important;
   font-size: 16px !important;
   font-weight: 600 !important;
-  letter-spacing: 2px;
+  letter-spacing: 0;
   border-radius: 12px !important;
+  box-shadow: 0 12px 24px rgba(64, 158, 255, 0.2);
 }
 
 .switch-mode {

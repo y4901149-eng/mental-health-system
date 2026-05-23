@@ -25,7 +25,8 @@ public class ChatController {
 
     @PostMapping("/session/create")
     public ResultVO<ChatSession> createSession(@RequestBody Map<String, String> body, HttpServletRequest request) {
-        return ResultVO.success(chatService.createSession((Long) request.getAttribute("userId"), body.get("title")));
+        String title = body == null ? null : body.get("title");
+        return ResultVO.success(chatService.createSession((Long) request.getAttribute("userId"), title));
     }
 
     @GetMapping("/session/{id}/messages")
@@ -35,7 +36,8 @@ public class ChatController {
 
     @PostMapping("/session/{id}/send")
     public ResultVO<Map<String, Object>> send(@PathVariable Long id, @RequestBody Map<String, String> body, HttpServletRequest request) {
-        return ResultVO.success(chatService.sendMessage(id, (Long) request.getAttribute("userId"), body.get("content")));
+        String content = body == null ? null : body.get("content");
+        return ResultVO.success(chatService.sendMessage(id, (Long) request.getAttribute("userId"), content));
     }
 
     @DeleteMapping("/session/{id}")

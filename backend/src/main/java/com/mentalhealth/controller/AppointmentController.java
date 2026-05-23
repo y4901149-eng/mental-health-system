@@ -22,6 +22,9 @@ public class AppointmentController {
     /** 创建预约 */
     @PostMapping("/create")
     public ResultVO<?> create(@RequestBody Appointment appointment, HttpServletRequest request) {
+        if (appointment == null) {
+            return ResultVO.badRequest("预约信息不能为空");
+        }
         Long userId = (Long) request.getAttribute("userId");
         appointment.setUserId(userId);
         appointmentService.createAppointment(appointment);
