@@ -161,22 +161,10 @@ export default {
         assessmentId: this.assessment.id,
         answers: this.answers
       }).then(res => {
-<<<<<<< HEAD
         this.$message.success('测评已提交。')
         this.$router.push('/assessment/result/' + res.data.id)
       }).catch(() => {
         this.$message.error('提交失败，请稍后重试。')
-=======
-        this.$message.success('评估完成！')
-        const recordId = res.data && (res.data.id || res.data.recordId)
-        if (recordId) {
-          this.$router.push('/assessment/result/' + recordId)
-        } else {
-          this.$router.push('/assessment')
-        }
-      }).catch(() => {
-        this.$message.error('提交失败，请重试')
->>>>>>> feature-risk-admin
       }).finally(() => {
         this.submitting = false
       })
