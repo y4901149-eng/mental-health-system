@@ -75,7 +75,14 @@
             class="msg-row"
             :class="message.senderRole === 'USER' ? 'msg-user' : 'msg-ai'"
           >
-            <div class="msg-avatar">{{ message.senderRole === 'USER' ? '我' : 'AI' }}</div>
+            <div class="msg-avatar" :class="message.senderRole === 'USER' ? 'user-avatar' : 'ai-avatar'">
+              <template v-if="message.senderRole === 'USER'">我</template>
+              <span v-else class="ai-core" aria-label="AI助手头像" role="img">
+                <span class="ai-eye left-eye"></span>
+                <span class="ai-eye right-eye"></span>
+                <span class="ai-smile"></span>
+              </span>
+            </div>
             <div class="msg-bubble">
               <div class="msg-text">{{ message.content }}</div>
               <div class="msg-time">{{ formatTime(message.createTime) }}</div>
@@ -83,7 +90,13 @@
           </div>
 
           <div v-if="aiThinking" class="msg-row msg-ai">
-            <div class="msg-avatar">AI</div>
+            <div class="msg-avatar ai-avatar">
+              <span class="ai-core" aria-label="AI助手头像" role="img">
+                <span class="ai-eye left-eye"></span>
+                <span class="ai-eye right-eye"></span>
+                <span class="ai-smile"></span>
+              </span>
+            </div>
             <div class="msg-bubble thinking">
               <span class="thinking-label">Thinking</span>
               <span class="thinking-dots">
@@ -574,11 +587,132 @@ export default {
   background: #edf3fb;
   color: #4b6685;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+  position: relative;
 }
 
-.msg-user .msg-avatar {
+.user-avatar {
   background: linear-gradient(135deg, #dff0ff, #f4fbff);
   color: #2678d9;
+}
+
+.ai-avatar {
+  color: transparent;
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.72) 0 5px, transparent 6px),
+    linear-gradient(135deg, #37b6a5 0%, #409eff 58%, #5f8df7 100%);
+  box-shadow:
+    0 10px 22px rgba(64, 158, 255, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+  overflow: visible;
+  isolation: isolate;
+}
+
+.ai-avatar::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid rgba(64, 158, 255, 0.22);
+  animation: aiHalo 2.8s infinite ease-in-out;
+}
+
+.ai-avatar::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #67c23a;
+  border: 2px solid #fff;
+}
+
+.ai-core {
+  width: 25px;
+  height: 20px;
+  position: relative;
+  display: block;
+  z-index: 1;
+  border-radius: 10px 10px 12px 12px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 -2px 0 rgba(64, 158, 255, 0.12),
+    0 2px 8px rgba(20, 70, 120, 0.12);
+}
+
+.ai-core::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  width: 2px;
+  height: 6px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateX(-50%);
+}
+
+.ai-core::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.65);
+  transform: translateX(-50%);
+}
+
+.ai-eye {
+  position: absolute;
+  top: 7px;
+  width: 4px;
+  height: 5px;
+  border-radius: 50%;
+  background: #2678d9;
+  animation: aiBlink 4.8s infinite ease-in-out;
+}
+
+.left-eye {
+  left: 7px;
+}
+
+.right-eye {
+  right: 7px;
+}
+
+.ai-smile {
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  width: 9px;
+  height: 5px;
+  border-bottom: 2px solid #37b6a5;
+  border-radius: 0 0 9px 9px;
+  transform: translateX(-50%);
+}
+
+@keyframes aiHalo {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes aiBlink {
+  0%, 88%, 100% {
+    transform: scaleY(1);
+  }
+  92% {
+    transform: scaleY(0.2);
+  }
 }
 
 .msg-bubble {
