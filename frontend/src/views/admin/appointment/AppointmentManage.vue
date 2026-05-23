@@ -5,7 +5,7 @@
 
     <!-- 统计卡片 -->
     <el-row :gutter="16" style="margin-bottom:16px;">
-      <el-col :span="6" v-for="s in statCards" :key="s.label">
+      <el-col :span="8" v-for="s in statCards" :key="s.label">
         <el-card shadow="never" :body-style="{ padding: '16px 20px' }">
           <div style="display:flex;align-items:center;gap:12px;">
             <div class="stat-icon" :style="{ background: s.bg }">{{ s.icon }}</div>
@@ -25,7 +25,7 @@
         <el-col :span="4"><el-input v-model="filters.counselor" placeholder="心理师" size="small" clearable @clear="search" @keyup.enter.native="search" /></el-col>
         <el-col :span="4">
           <el-select v-model="filters.status" placeholder="状态" size="small" clearable @change="search" style="width:100%;">
-            <el-option label="待确认" value="pending" /><el-option label="已确认" value="confirmed" />
+            <el-option label="已确认" value="confirmed" />
             <el-option label="已完成" value="completed" /><el-option label="已取消" value="cancelled" />
           </el-select>
         </el-col>
@@ -61,7 +61,6 @@
         <el-table-column label="操作" width="210" align="center">
           <template slot-scope="{row}">
             <el-button type="text" size="mini" @click="showDetail(row)">详情</el-button>
-            <el-button v-if="row.status==='pending'" type="text" size="mini" style="color:#67C23A;font-weight:600;" @click="changeStatus(row.id,'confirmed')">确认</el-button>
             <el-button v-if="row.status!=='cancelled' && row.status!=='completed'" type="text" size="mini" style="color:#E6A23C;font-weight:600;" @click="changeStatus(row.id,'cancelled')">取消</el-button>
             <el-button type="text" size="mini" style="color:#F56C6C;" @click="handleDelete(row.id)">删除</el-button>
           </template>
@@ -89,12 +88,11 @@
         </el-descriptions>
         <!-- 操作按钮 -->
         <div style="margin-top:16px;text-align:center;border-top:1px solid #F0F4FF;padding-top:16px;">
-          <template v-if="detail.status==='pending'">
-            <el-button type="success" size="medium" @click="changeStatus(detail.id,'confirmed');detailVisible=false" style="margin-right:12px;">✅ 确认预约</el-button>
-            <el-button type="warning" size="medium" @click="changeStatus(detail.id,'cancelled');detailVisible=false">❌ 取消预约</el-button>
+          <template v-if="detail.status==='confirmed'">
+            <el-tag type="success" size="large" style="margin-bottom:8px;display:block;">已确认 — 系统自动确认</el-tag>
+            <el-button type="warning" size="medium" @click="changeStatus(detail.id,'cancelled');detailVisible=false">取消预约</el-button>
           </template>
-          <el-tag v-else-if="detail.status==='confirmed'" type="success" size="large">✅ 已确认 — 该预约已完成确认流程</el-tag>
-          <el-tag v-else-if="detail.status==='cancelled'" type="danger" size="large">❌ 已取消 — 该预约已被取消</el-tag>
+          <el-tag v-else-if="detail.status==='cancelled'" type="danger" size="large">已取消</el-tag>
           <el-tag v-else type="info" size="large">已完成</el-tag>
         </div>
       </div>
@@ -113,10 +111,9 @@ export default {
       filters:{ keyword:'', counselor:'', status:'' },
       dateRange:null,
       statCards:[
-        { icon:'⏳', label:'待确认', value:0, bg:'#FFF7E6' },
         { icon:'📅', label:'今日预约', value:0, bg:'#EBF5FF' },
         { icon:'✅', label:'已确认', value:0, bg:'#E8F8F0' },
-        { icon:'❌', label:'已取消', value:0, bg:'#FFF1F0' }
+        { icon:'✅', label:'已完成', value:0, bg:'#E8F8F0' }
       ],
       detailVisible:false, detail:null
     }
@@ -145,12 +142,15 @@ export default {
           const c = this.filters.counselor.toLowerCase()
           filtered = filtered.filter(x => (x.counselor_name || '').toLowerCase().includes(c))
         }
+        // 默认不显示已取消，除非筛选选择了"已取消"
+        if (this.filters.status !== 'cancelled') {
+          filtered = filtered.filter(x => x.status !== 'cancelled')
+        }
         this.list = filtered; this.total = filtered.length
         this.statCards=[
-          { icon:'⏳', label:'待确认', value:rec.filter(x=>x.status==='pending').length, bg:'#FFF7E6' },
           { icon:'📅', label:'今日预约', value:rec.filter(x=>x.appointment_date===new Date().toISOString().substring(0,10)).length, bg:'#EBF5FF' },
           { icon:'✅', label:'已确认', value:rec.filter(x=>x.status==='confirmed').length, bg:'#E8F8F0' },
-          { icon:'❌', label:'已取消', value:rec.filter(x=>x.status==='cancelled').length, bg:'#FFF1F0' }
+          { icon:'✅', label:'已完成', value:rec.filter(x=>x.status==='completed').length, bg:'#E8F8F0' }
         ]
       }).finally(()=>{this.loading=false})
     },

@@ -13,8 +13,10 @@
         text-color="#8C9AB7" active-text-color="#409EFF" router class="sidebar-menu">
         <el-menu-item index="/admin/dashboard"><i class="el-icon-monitor"></i><span>数据概览</span></el-menu-item>
         <el-menu-item index="/admin/users"><i class="el-icon-user"></i><span>用户管理</span></el-menu-item>
+        <el-menu-item index="/admin/articles"><i class="el-icon-reading"></i><span>健康知识管理</span></el-menu-item>
         <el-menu-item index="/admin/assessments"><i class="el-icon-setting"></i><span>量表管理</span></el-menu-item>
         <el-menu-item index="/admin/crisis"><i class="el-icon-warning"></i><span>危机预警</span></el-menu-item>
+        <el-menu-item index="/admin/counselors"><i class="el-icon-s-custom"></i><span>心理老师管理</span></el-menu-item>
         <el-menu-item index="/admin/appointment"><i class="el-icon-date"></i><span>预约管理</span></el-menu-item>
       </el-menu>
     </div>
@@ -48,8 +50,8 @@
 import { mapGetters } from 'vuex'
 const titleMap = {
   '/admin/dashboard':'数据概览','/admin/users':'用户管理',
-  '/admin/assessments':'量表管理','/admin/crisis':'危机预警',
-  '/admin/diary':'日记管理','/admin/mood':'情绪管理','/admin/report':'周报管理','/admin/chat':'对话管理','/admin/appointment':'预约管理'
+  '/admin/articles':'健康知识管理','/admin/assessments':'量表管理','/admin/crisis':'危机预警',
+  '/admin/counselors':'心理老师管理', '/admin/diary':'日记管理','/admin/mood':'情绪管理','/admin/report':'周报管理','/admin/chat':'对话管理','/admin/appointment':'预约管理'
 }
 export default {
   name: 'AdminLayout',

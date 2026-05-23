@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.mentalhealth.entity.Appointment;
 import com.mentalhealth.mapper.AppointmentMapper;
 import com.mentalhealth.service.AppointmentService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -18,18 +20,33 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
 
     private static final List<String> ACTIVE_STATUSES = Arrays.asList("pending", "confirmed");
 
+    @Autowired
+    private JdbcTemplate jdbc;
+
     @Override
     public void createAppointment(Appointment appointment) {
         validateAppointment(appointment);
 
+        // 根据日期计算星期几
+        int weekDay = java.time.LocalDate.parse(appointment.getAppointmentDate().trim()).getDayOfWeek().getValue();
+
+        // 校验该老师在该日期对应星期是否开放该时间段
+        Integer slotCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM counselor_available_slot s JOIN counselor c ON s.counselor_id = c.id " +
+                "WHERE c.name = ? AND s.week_day = ? AND s.time_slot = ? AND s.enabled = 1",
+                Integer.class, appointment.getCounselorName().trim(), weekDay, appointment.getTimeSlot().trim());
+        if (slotCount == null || slotCount == 0) {
+            throw new RuntimeException("该老师在该日期暂不支持所选时间段");
+        }
+
+        // 校验该时间段是否已被预约
         long duplicateCount = count(new LambdaQueryWrapper<Appointment>()
-                .eq(Appointment::getUserId, appointment.getUserId())
                 .eq(Appointment::getCounselorName, appointment.getCounselorName())
                 .eq(Appointment::getAppointmentDate, appointment.getAppointmentDate())
                 .eq(Appointment::getTimeSlot, appointment.getTimeSlot())
                 .in(Appointment::getStatus, ACTIVE_STATUSES));
         if (duplicateCount > 0) {
-            throw new RuntimeException("该时间段已有预约，请勿重复提交");
+            throw new RuntimeException("该咨询师在该时间段已被预约，请选择其他时间");
         }
 
         appointment.setCounselorName(appointment.getCounselorName().trim());
@@ -37,7 +54,7 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
         appointment.setTimeSlot(appointment.getTimeSlot().trim());
         appointment.setType(isBlank(appointment.getType()) ? "individual" : appointment.getType().trim());
         appointment.setRemark(isBlank(appointment.getRemark()) ? null : appointment.getRemark().trim());
-        appointment.setStatus("pending");
+        appointment.setStatus("confirmed");
         save(appointment);
     }
 
@@ -95,6 +112,15 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
         if (isBlank(appointment.getTimeSlot())) {
             throw new RuntimeException("请选择时间段");
         }
+    }
+
+    @Override
+    public List<String> getBookedSlots(String counselorName, String date) {
+        List<Appointment> list = list(new LambdaQueryWrapper<Appointment>()
+                .eq(Appointment::getCounselorName, counselorName)
+                .eq(Appointment::getAppointmentDate, date)
+                .in(Appointment::getStatus, ACTIVE_STATUSES));
+        return list.stream().map(Appointment::getTimeSlot).collect(java.util.stream.Collectors.toList());
     }
 
     private boolean isBlank(String value) {

@@ -22,9 +22,9 @@
     <section class="flow-panel">
       <div class="flow-copy">
         <p class="eyebrow">处理进度</p>
-        <h3>{{ nextAppointment ? '最近预约正在跟进' : '提交后由负责人确认' }}</h3>
+        <h3>{{ nextAppointment ? '预约已确认' : '提交后系统自动确认' }}</h3>
         <p>
-          {{ nextAppointment ? appointmentHint(nextAppointment) : '预约提交后会进入待确认状态，咨询负责人确认后状态会更新为已确认。' }}
+          {{ nextAppointment ? appointmentHint(nextAppointment) : '预约提交后系统会自动校验时间段并确认，无需等待人工审核。' }}
         </p>
       </div>
       <div class="flow-steps">
@@ -57,12 +57,12 @@
             <el-select v-model="form.counselorName" placeholder="请选择咨询师" style="width: 100%;">
               <el-option
                 v-for="counselor in counselors"
-                :key="counselor.value"
-                :label="counselor.label"
-                :value="counselor.value"
+                :key="counselor.id"
+                :label="counselor.name + '（擅长' + counselor.specialty + '）'"
+                :value="counselor.name"
               >
                 <div class="counselor-option">
-                  <span>{{ counselor.value }}</span>
+                  <span>{{ counselor.name }}</span>
                   <small>{{ counselor.specialty }}</small>
                 </div>
               </el-option>
@@ -82,7 +82,12 @@
 
           <el-form-item label="时间段" prop="timeSlot">
             <el-select v-model="form.timeSlot" placeholder="请选择时间段" style="width: 100%;">
-              <el-option v-for="slot in timeSlots" :key="slot" :label="slot" :value="slot" />
+              <el-option
+                v-for="slot in availableTimeSlots"
+                :key="slot.value"
+                :label="slot.label"
+                :value="slot.value"
+                :disabled="slot.disabled" />
             </el-select>
           </el-form-item>
 
@@ -176,7 +181,7 @@
 </template>
 
 <script>
-import { createAppointment, getMyAppointments, cancelAppointment } from '@/api/appointment'
+import { createAppointment, getMyAppointments, cancelAppointment, getCounselors, getBookedSlots, getCounselorTimeSlots } from '@/api/appointment'
 
 export default {
   name: 'Appointment',
@@ -186,12 +191,10 @@ export default {
       appointments: [],
       submitting: false,
       loading: false,
-      counselors: [
-        { value: '张老师', label: '张老师（擅长焦虑管理）', specialty: '焦虑管理' },
-        { value: '李老师', label: '李老师（擅长情绪调节）', specialty: '情绪调节' },
-        { value: '王老师', label: '王老师（擅长压力管理）', specialty: '压力管理' }
-      ],
-      timeSlots: ['09:00-10:00', '10:00-11:00', '14:00-15:00', '15:00-16:00'],
+      counselors: [],
+      bookedSlots: [],
+      counselorTimeSlots: [],
+      counselorsMap: {},
       rules: {
         counselorName: [{ required: true, message: '请选择咨询师', trigger: 'change' }],
         appointmentDate: [{ required: true, message: '请选择预约日期', trigger: 'change' }],
@@ -208,6 +211,14 @@ export default {
     }
   },
   computed: {
+    availableTimeSlots() {
+      return this.counselorTimeSlots.map(s => ({
+        value: s,
+        label: this.bookedSlots.includes(s) ? s + '（已预约）' : s,
+        disabled: this.bookedSlots.includes(s)
+      }))
+    },
+
     activeCount() {
       return this.appointments.filter(item => ['pending', 'confirmed'].includes(item.status)).length
     },
@@ -223,15 +234,15 @@ export default {
           key: 'submitted',
           index: '1',
           title: '提交预约',
-          desc: this.nextAppointment ? '已收到预约信息' : '填写信息后提交',
+          desc: this.nextAppointment ? '预约信息已提交' : '填写信息后提交',
           active: !status,
           done: !!status
         },
         {
           key: 'confirm',
           index: '2',
-          title: '负责人确认',
-          desc: status === 'confirmed' ? '已确认时间安排' : '等待负责人处理',
+          title: '系统确认',
+          desc: status === 'confirmed' ? '时间段校验通过，预约已确认' : '校验时间段中',
           active: status === 'pending',
           done: status === 'confirmed'
         },
@@ -246,8 +257,14 @@ export default {
       ]
     }
   },
+  watch: {
+    'form.counselorName': function() { this.fetchCounselorSlots(); this.fetchBookedSlots() },
+    'form.appointmentDate': function() { this.fetchCounselorSlots(); this.fetchBookedSlots() }
+  },
+
   created() {
     this.fetchAppointments()
+    this.fetchCounselors()
   },
   methods: {
     emptyForm() {
@@ -264,11 +281,45 @@ export default {
       this.loading = true
       return getMyAppointments()
         .then(res => {
-          this.appointments = res.data || []
+          this.appointments = (res.data || []).filter(a => a.status !== 'cancelled')
         })
         .finally(() => {
           this.loading = false
         })
+    },
+
+    fetchCounselors() {
+      getCounselors().then(res => {
+        this.counselors = res.data || []
+        const map = {}
+        this.counselors.forEach(c => { map[c.name] = c.id })
+        this.counselorsMap = map
+      }).catch(() => {})
+    },
+
+    fetchCounselorSlots() {
+      this.counselorTimeSlots = []
+      this.form.timeSlot = ''
+      if (!this.form.counselorName || !this.form.appointmentDate) return
+      const id = this.counselorsMap[this.form.counselorName]
+      if (!id) return
+      getCounselorTimeSlots(id, this.form.appointmentDate).then(res => {
+        this.counselorTimeSlots = res.data || []
+      }).catch(() => {})
+    },
+
+    fetchBookedSlots() {
+      if (!this.form.counselorName || !this.form.appointmentDate) {
+        this.bookedSlots = []
+        return
+      }
+      getBookedSlots(this.form.counselorName, this.form.appointmentDate).then(res => {
+        this.bookedSlots = res.data || []
+        // 如果当前所选时间段已被预约，清空
+        if (this.form.timeSlot && this.bookedSlots.includes(this.form.timeSlot)) {
+          this.form.timeSlot = ''
+        }
+      }).catch(() => {})
     },
 
     submitAppointment() {
@@ -277,7 +328,7 @@ export default {
         this.submitting = true
         createAppointment({ ...this.form })
           .then(() => {
-            this.$message.success('预约提交成功，请等待确认。')
+            this.$message.success('预约提交成功，已自动确认。')
             this.form = this.emptyForm()
             this.$nextTick(() => this.$refs.form && this.$refs.form.clearValidate())
             this.fetchAppointments()
@@ -341,9 +392,9 @@ export default {
     appointmentHint(appointment) {
       const timeText = appointment.appointmentDate + ' ' + this.formatSlot(appointment.timeSlot)
       if (appointment.status === 'confirmed') {
-        return appointment.counselorName + ' 已确认 ' + timeText + ' 的预约，请按时参加。'
+        return appointment.counselorName + ' 的 ' + timeText + ' 预约已确认，请按时参加。'
       }
-      return appointment.counselorName + ' 的 ' + timeText + ' 预约已提交，请等待负责人确认。'
+      return appointment.counselorName + ' 的 ' + timeText + ' 预约已提交，系统正在确认中。'
     }
   }
 }

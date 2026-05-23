@@ -23,4 +23,7 @@ public interface AppointmentService extends IService<Appointment> {
 
     /** 完成预约 */
     void completeAppointment(Long id);
+
+    /** 获取某咨询师某日期已被预约的时间段 */
+    List<String> getBookedSlots(String counselorName, String date);
 }

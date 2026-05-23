@@ -1,9 +1,8 @@
-<!-- 管理员 - 日记管理（风险监控视图） -->
 <template>
   <div class="page-container">
     <div class="page-title-row">
-      <h2 class="page-title">📖 日记风险监控</h2>
-      <el-tag size="medium" type="danger" effect="plain" v-if="total > 0">共 {{ total }} 条记录</el-tag>
+      <h2 class="page-title">📖 日记管理</h2>
+      <el-tag size="medium" type="primary" effect="plain" v-if="total > 0">共 {{ total }} 条记录</el-tag>
     </div>
 
     <!-- 统计卡片 -->
@@ -24,25 +23,14 @@
     <!-- 筛选区 -->
     <el-card shadow="never" class="filter-card">
       <el-row :gutter="12">
-        <el-col :span="6">
+        <el-col :span="8">
           <el-input v-model="filters.keyword" placeholder="用户名/标题/内容" size="small" clearable @clear="search" @keyup.enter.native="search" />
         </el-col>
-        <el-col :span="4">
-          <el-select v-model="filters.moodTag" placeholder="情绪" size="small" clearable @change="search" style="width:100%;">
-            <el-option v-for="m in moodOptions" :key="m" :label="m" :value="m" />
-          </el-select>
-        </el-col>
-        <el-col :span="4">
-          <el-input v-model.number="filters.minScore" placeholder="最低分" size="small" @keyup.enter.native="search" />
-        </el-col>
-        <el-col :span="4">
-          <el-input v-model.number="filters.maxScore" placeholder="最高分" size="small" @keyup.enter.native="search" />
-        </el-col>
-        <el-col :span="4">
+        <el-col :span="8">
           <el-date-picker v-model="dateRange" type="daterange" range-separator="~" size="small"
             start-placeholder="开始" end-placeholder="结束" style="width:100%;" @change="search" />
         </el-col>
-        <el-col :span="2" style="text-align:right;">
+        <el-col :span="4" style="text-align:right;">
           <el-button size="small" type="primary" @click="search">筛选</el-button>
         </el-col>
       </el-row>
@@ -50,29 +38,17 @@
 
     <!-- 列表 -->
     <el-card shadow="never" class="table-card">
-      <el-table :data="list" stripe v-loading="loading" style="width:100%;"
-        :row-class-name="riskRowClass" size="small"
+      <el-table :data="list" stripe v-loading="loading" style="width:100%;" size="small"
         :header-cell-style="{ background:'#F8FAFF', color:'#2C3E50', textAlign:'center' }"
         :cell-style="{ textAlign:'center', padding:'6px 0' }">
         <el-table-column prop="username" label="用户名" min-width="100" />
-        <el-table-column label="情绪" min-width="100">
-          <template slot-scope="{row}"><el-tag size="mini" effect="plain">{{ row.mood_tags || '-' }}</el-tag></template>
-        </el-table-column>
-        <el-table-column prop="emotion_score" label="分数" min-width="80" />
-        <el-table-column label="风险等级" min-width="100">
-          <template slot-scope="{row}">
-            <el-tag size="mini" :type="riskType(row.emotion_score)" effect="dark">
-              {{ riskLevel(row.emotion_score) }}
-            </el-tag>
-          </template>
-        </el-table-column>
         <el-table-column label="时间" min-width="140">
           <template slot-scope="{row}">{{ formatTime(row.create_time) }}</template>
         </el-table-column>
         <el-table-column label="操作" min-width="100">
           <template slot-scope="{row}">
             <el-button type="text" size="mini" @click="showDetail(row)">详情</el-button>
-            <el-button type="text" size="mini" style="color:#C0C4CC;" @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="text" size="mini" style="color:#F56C6C;" @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -85,11 +61,6 @@
     <!-- 详情弹窗 -->
     <el-dialog title="日记详情" :visible.sync="detailVisible" width="600px" :close-on-click-modal="true" top="6vh">
       <div v-if="detail">
-        <div style="margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <el-tag size="small" :type="riskType(detail.emotion_score)" effect="dark">{{ riskLevel(detail.emotion_score) }}</el-tag>
-          <el-tag size="small" effect="plain">{{ detail.mood_tags || '-' }}</el-tag>
-          <span style="font-size:12px;color:#909399;">情绪分数: <b>{{ detail.emotion_score ?? '-' }}</b></span>
-        </div>
         <h3 style="margin:0 0 10px;font-size:17px;color:#2C3E50;">{{ detail.title || '(无标题)' }}</h3>
         <div v-if="detail.imageUrl" style="margin-bottom:12px;">
           <img :src="detail.imageUrl" style="max-width:100%;max-height:300px;border-radius:8px;cursor:pointer;" @click="previewImage(detail.imageUrl)" />
@@ -107,23 +78,20 @@
 <script>
 import { getAdminDiaryList, deleteAdminDiary } from '@/api/admin/manage'
 
-const moodOptions = ['开心','平静','悲伤','焦虑','愤怒','疲惫','一般']
-
 export default {
   name: 'DiaryManage',
   data() {
     return {
       list:[], total:0, pageNum:1, pageSize:10, loading:false,
-      filters: { keyword:'', moodTag:'', minScore:null, maxScore:null },
+      filters: { keyword:'' },
       dateRange: null,
       detailVisible:false, detail:null,
       statCards: [
         { icon:'📝', label:'今日新增', value:0, bg:'#EBF5FF' },
-        { icon:'⚠️', label:'高风险(<30)', value:0, bg:'#FFF1F0' },
+        { icon:'⚠️', label:'低分用户(7d)', value:0, bg:'#FFF1F0' },
         { icon:'📊', label:'7天平均分', value:0, bg:'#F0EFFF' },
-        { icon:'🔴', label:'低分(<20)', value:0, bg:'#FFF7E6' }
-      ],
-      moodOptions
+        { icon:'🔴', label:'严重低分', value:0, bg:'#FFF7E6' }
+      ]
     }
   },
   created() { this.fetch() },
@@ -132,9 +100,6 @@ export default {
       this.loading=true
       const params = { page:this.pageNum, size:this.pageSize }
       if (this.filters.keyword) params.keyword = this.filters.keyword
-      if (this.filters.moodTag) params.moodTag = this.filters.moodTag
-      if (this.filters.minScore != null) params.minScore = this.filters.minScore
-      if (this.filters.maxScore != null) params.maxScore = this.filters.maxScore
       if (this.dateRange) {
         params.startDate = this.dateRange[0].toISOString().substring(0,10)
         params.endDate = this.dateRange[1].toISOString().substring(0,10)
@@ -146,40 +111,13 @@ export default {
         const s = d.stats || {}
         this.statCards = [
           { icon:'📝', label:'今日新增', value:s.todayCount||0, bg:'#EBF5FF' },
-          { icon:'⚠️', label:'高风险(<30)', value:s.highRiskCount||0, bg:'#FFF1F0' },
+          { icon:'⚠️', label:'低分用户(7d)', value:s.highRiskCount||0, bg:'#FFF1F0' },
           { icon:'📊', label:'7天平均分', value:s.avgScore7d||0, bg:'#F0EFFF' },
-          { icon:'🔴', label:'低分(<20)', value:s.lowScoreCount||0, bg:'#FFF7E6' }
+          { icon:'🔴', label:'严重低分', value:s.lowScoreCount||0, bg:'#FFF7E6' }
         ]
       }).finally(()=>{this.loading=false})
     },
     search(){this.pageNum=1;this.fetch()},
-    scoreColor(score) {
-      if (score == null) return '#909399'
-      if (score >= 60) return '#67C23A'
-      if (score >= 40) return '#E6A23C'
-      if (score >= 20) return '#E6A23C'
-      return '#F56C6C'
-    },
-    riskLevel(score) {
-      if (score == null) return '未知'
-      if (score >= 60) return '正常'
-      if (score >= 40) return '关注'
-      if (score >= 20) return '中危'
-      return '高危'
-    },
-    riskType(score) {
-      if (score == null) return 'info'
-      if (score >= 60) return 'success'
-      if (score >= 40) return 'warning'
-      if (score >= 20) return 'warning'
-      return 'danger'
-    },
-    riskRowClass({row}) {
-      if (row.emotion_score == null) return ''
-      if (row.emotion_score < 20) return 'risk-row-danger'
-      if (row.emotion_score < 40) return 'risk-row-orange'
-      return ''
-    },
     formatTime(t) {
       if (!t) return ''
       const d = new Date(t)

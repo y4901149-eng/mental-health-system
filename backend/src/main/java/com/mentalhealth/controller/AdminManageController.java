@@ -40,30 +40,26 @@ public class AdminManageController {
             String kw = keyword.replace("'", "''");
             where.append(" AND (d.content LIKE '%").append(kw).append("%' OR d.title LIKE '%").append(kw).append("%' OR u.username LIKE '%").append(kw).append("%')");
         }
-        if (moodTag != null && !moodTag.isEmpty()) {
-            where.append(" AND d.mood_tags = '").append(moodTag.replace("'", "''")).append("'");
-        }
-        if (minScore != null) where.append(" AND d.emotion_score >= ").append(minScore);
-        if (maxScore != null) where.append(" AND d.emotion_score <= ").append(maxScore);
+        // 日记不再按情绪筛选，moodTag/minScore/maxScore 参数不再使用
         if (startDate != null && !startDate.isEmpty()) where.append(" AND d.create_time >= '").append(startDate).append("'");
         if (endDate != null && !endDate.isEmpty()) where.append(" AND d.create_time <= '").append(endDate).append("'");
 
         List<Map<String, Object>> list = jdbc.queryForList(
-                "SELECT d.id, d.user_id, d.title, d.content, d.mood_tags, d.emotion_score, d.create_time, u.username " +
+                "SELECT d.id, d.user_id, d.title, d.content, d.create_time, u.username " +
                 "FROM diary d LEFT JOIN user u ON d.user_id = u.id" + where +
-                " ORDER BY COALESCE(d.emotion_score, 100) ASC, d.create_time DESC LIMIT " + size + " OFFSET " + offset);
+                " ORDER BY d.create_time DESC LIMIT " + size + " OFFSET " + offset);
         int total = jdbc.queryForObject("SELECT COUNT(*) FROM diary d LEFT JOIN user u ON d.user_id = u.id" + where, Integer.class);
 
-        // 统计数据
+        // 统计数据（情绪数据改为从 mood_record 读取）
         Map<String, Object> stats = new HashMap<>();
         stats.put("todayCount", jdbc.queryForObject(
                 "SELECT COUNT(*) FROM diary WHERE DATE(create_time) = CURDATE()", Integer.class));
         stats.put("highRiskCount", jdbc.queryForObject(
-                "SELECT COUNT(*) FROM diary WHERE emotion_score < 30", Integer.class));
+                "SELECT COUNT(DISTINCT user_id) FROM mood_record WHERE mood_score <= 3 AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)", Integer.class));
         stats.put("avgScore7d", jdbc.queryForObject(
-                "SELECT COALESCE(ROUND(AVG(emotion_score),1),0) FROM diary WHERE create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND emotion_score IS NOT NULL", Double.class));
+                "SELECT COALESCE(ROUND(AVG(mood_score) * 10, 1), 0) FROM mood_record WHERE create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND mood_score IS NOT NULL", Double.class));
         stats.put("lowScoreCount", jdbc.queryForObject(
-                "SELECT COUNT(*) FROM diary WHERE emotion_score < 20", Integer.class));
+                "SELECT COUNT(*) FROM mood_record WHERE mood_score <= 2 AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)", Integer.class));
 
         Map<String, Object> result = pageResult(list, total, page, size);
         result.put("stats", stats);

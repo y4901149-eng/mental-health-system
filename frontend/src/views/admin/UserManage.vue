@@ -127,16 +127,8 @@
           <el-tab-pane label="📖 日记记录" name="diary">
             <el-table :data="detailDiary" stripe v-loading="detailLoading" size="small" style="width:100%;margin-top:12px;"
               :header-cell-style="{background:'#F8FAFF',color:'#2C3E50',textAlign:'center'}"
-              :cell-style="{textAlign:'center',padding:'6px 0'}"
-              :row-class-name="diaryRiskRow">
-              <el-table-column prop="title" label="标题" min-width="160" />
-              <el-table-column prop="mood_tags" label="情绪" width="100" />
-              <el-table-column prop="emotion_score" label="分数" width="80" />
-              <el-table-column label="风险等级" width="100">
-                <template slot-scope="{row}">
-                  <el-tag size="mini" :type="riskType(row.emotion_score)" effect="dark">{{ riskLevel(row.emotion_score) }}</el-tag>
-                </template>
-              </el-table-column>
+              :cell-style="{textAlign:'center',padding:'6px 0'}">
+              <el-table-column prop="title" label="标题" min-width="200" />
               <el-table-column label="时间" width="150">
                 <template slot-scope="{row}">{{ formatTime(row.create_time) }}</template>
               </el-table-column>

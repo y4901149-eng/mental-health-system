@@ -50,7 +50,6 @@
           </div>
           <div v-if="recentDiaries.length > 0" class="recent-diary-list">
             <div class="rd-item" v-for="d in recentDiaries" :key="d.id">
-              <div class="rd-mood">{{ getMoodEmoji(d.mood_tags) }}</div>
               <div class="rd-body">
                 <div class="rd-text">{{ summaryText(d.content) }}</div>
                 <div class="rd-time">{{ formatDate(d.create_time) }}</div>

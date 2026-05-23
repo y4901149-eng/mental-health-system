@@ -31,6 +31,8 @@ import MoodManage from '@/views/admin/mood/MoodManage.vue'
 import ReportManage from '@/views/admin/report/ReportManage.vue'
 import ChatManage from '@/views/admin/chat/ChatManage.vue'
 import AppointmentManage from '@/views/admin/appointment/AppointmentManage.vue'
+import CounselorManage from '@/views/admin/counselor/CounselorManage.vue'
+import ArticleManage from '@/views/admin/article/ArticleManage.vue'
 
 Vue.use(Router)
 
@@ -77,6 +79,8 @@ const routes = [
       { path: 'mood', name: 'MoodManage', component: MoodManage, meta: { title: '情绪管理', role: 'admin' } },
       { path: 'report', name: 'ReportManage', component: ReportManage, meta: { title: '周报管理', role: 'admin' } },
       { path: 'chat', name: 'ChatManage', component: ChatManage, meta: { title: '对话管理', role: 'admin' } },
+      { path: 'articles', name: 'ArticleManage', component: ArticleManage, meta: { title: '健康知识管理', role: 'admin' } },
+      { path: 'counselors', name: 'CounselorManage', component: CounselorManage, meta: { title: '心理老师管理', role: 'admin' } },
       { path: 'appointment', name: 'AppointmentManage', component: AppointmentManage, meta: { title: '预约管理', role: 'admin' } }
     ]
   }

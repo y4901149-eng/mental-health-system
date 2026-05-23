@@ -26,3 +26,29 @@ export function cancelAppointment(id) {
     method: 'put'
   })
 }
+
+/** 获取咨询师列表 */
+export function getCounselors() {
+  return request({
+    url: '/appointment/counselors',
+    method: 'get'
+  })
+}
+
+/** 获取某咨询师某日期已被预约的时间段 */
+export function getBookedSlots(counselorName, date) {
+  return request({
+    url: '/appointment/booked-slots',
+    method: 'get',
+    params: { counselorName, date }
+  })
+}
+
+/** 获取咨询师可预约时间段（用户端） */
+export function getCounselorTimeSlots(counselorId, date) {
+  return request({
+    url: '/appointment/counselors/' + counselorId + '/slots',
+    method: 'get',
+    params: { date }
+  })
+}

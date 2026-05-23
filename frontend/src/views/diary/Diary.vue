@@ -43,9 +43,6 @@
             <img :src="item.imageUrl" class="cover-img" />
           </div>
           <div class="card-banner" v-else :style="{ background: getBannerGradient(item.id) }">
-            <div class="banner-mood">
-              <span class="banner-emoji">{{ getMoodEmoji(item.moodTags) }}</span>
-            </div>
             <div class="banner-date">{{ formatDate(item.createTime) }}</div>
           </div>
 
@@ -53,18 +50,6 @@
           <div class="card-body">
             <!-- 标题 -->
             <h3 class="diary-title" v-if="item.title">{{ item.title }}</h3>
-
-            <!-- 情绪标签 + 分数 -->
-            <div class="mood-row">
-              <div class="mood-tags" v-if="item.moodTags">
-                <span class="mood-tag" v-for="tag in parseTags(item.moodTags)" :key="tag"
-                  :style="{ background: getTagColor(tag) }">{{ tag }}</span>
-              </div>
-              <span class="emotion-score" v-if="item.emotionScore != null"
-                :style="{ color: getScoreColor(item.emotionScore) }">
-                {{ item.emotionScore }}分
-              </span>
-            </div>
 
             <!-- 日记文字 -->
             <p class="diary-content">{{ item.content }}</p>
@@ -116,17 +101,6 @@
       <el-form :model="diaryForm" label-position="top" size="medium">
         <el-form-item label="标题">
           <el-input v-model="diaryForm.title" placeholder="给日记取个标题（选填）" maxlength="100" show-word-limit />
-        </el-form-item>
-
-        <el-form-item label="今天的心情">
-          <el-radio-group v-model="diaryForm.moodTags" size="medium">
-            <el-radio-button label="开心">😊 开心</el-radio-button>
-            <el-radio-button label="平静">😌 平静</el-radio-button>
-            <el-radio-button label="悲伤">😢 悲伤</el-radio-button>
-            <el-radio-button label="焦虑">😰 焦虑</el-radio-button>
-            <el-radio-button label="愤怒">😠 愤怒</el-radio-button>
-            <el-radio-button label="疲惫">😴 疲惫</el-radio-button>
-          </el-radio-group>
         </el-form-item>
 
         <el-form-item label="日记内容">
@@ -239,7 +213,6 @@ export default {
       previewUrl: '',
       diaryForm: {
         title: '',
-        moodTags: '平静',
         content: '',
         imageUrl: ''
       }
@@ -296,7 +269,6 @@ export default {
       const data = {
         title: this.diaryForm.title || undefined,
         content: this.diaryForm.content,
-        moodTags: this.diaryForm.moodTags,
         imageUrl: this.diaryForm.imageUrl || undefined
       }
       if (this.editingDiary) data.id = this.editingDiary.id
@@ -307,7 +279,7 @@ export default {
         this.$message.success(this.editingDiary ? '日记已更新' : '日记已保存')
         this.showEditor = false
         this.editingDiary = null
-        this.diaryForm = { title: '', moodTags: '平静', content: '', imageUrl: '' }
+        this.diaryForm = { title: '', content: '', imageUrl: '' }
         this.pageNum = 1
         this.fetchDiary()
       }).finally(() => {
@@ -319,7 +291,6 @@ export default {
       this.editingDiary = item
       this.diaryForm = {
         title: item.title || '',
-        moodTags: item.moodTags || '平静',
         content: item.content || '',
         imageUrl: item.imageUrl || ''
       }

@@ -56,8 +56,8 @@ public class DashboardController {
         List<Map<String, Object>> trendData = jdbcTemplate.queryForList(trendSql);
         result.put("recentMoodTrend", trendData);
 
-        // 6. 最近5条日记
-        String diarySql = "SELECT id, content, mood_tags, emotion_score, create_time " +
+        // 6. 最近5条日记（仅展示内容，情绪数据请查看情绪记录）
+        String diarySql = "SELECT id, content, create_time " +
                 "FROM diary" + userWhere +
                 " ORDER BY create_time DESC LIMIT 5";
         List<Map<String, Object>> recentDiaries = jdbcTemplate.queryForList(diarySql);
