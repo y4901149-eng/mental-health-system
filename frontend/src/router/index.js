@@ -15,7 +15,6 @@ import ArticleList from '@/views/article/ArticleList.vue'
 import ArticleDetail from '@/views/article/ArticleDetail.vue'
 import Appointment from '@/views/appointment/Appointment.vue'
 import MoodRecord from '@/views/mood/MoodRecord.vue'
-import MoodChart from '@/views/mood/MoodChart.vue'
 import Diary from '@/views/diary/Diary.vue'
 import Chat from '@/views/chat/Chat.vue'
 import Profile from '@/views/profile/Profile.vue'
@@ -60,7 +59,7 @@ const routes = [
       { path: 'appointment', name: 'Appointment', component: Appointment, meta: { title: '心理咨询预约' } },
       { path: 'diary', name: 'Diary', component: Diary, meta: { title: '心情日记' } },
       { path: 'mood', name: 'MoodRecord', component: MoodRecord, meta: { title: '情绪记录' } },
-      { path: 'mood/chart', name: 'MoodChart', component: MoodChart, meta: { title: '情绪趋势' } },
+      { path: 'mood/chart', redirect: '/report' },
       { path: 'chat', name: 'Chat', component: Chat, meta: { title: 'AI 共情对话' } },
       { path: 'profile', name: 'Profile', component: Profile, meta: { title: '个人中心' } },
       { path: 'emergency', name: 'Emergency', component: Emergency, meta: { title: '紧急联系人' } },

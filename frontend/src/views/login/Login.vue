@@ -1,6 +1,5 @@
 <!-- 登录/注册页 - 浅蓝色卡片风格 -->
-<!-- 替换文件：src/views/login/Login.vue -->
-<!-- 功能逻辑完全不变，仅重构 UI -->
+<!-- 功能逻辑完全不变，仅替换 logo 图标为爱心心理健康图标 -->
 
 <template>
   <div class="login-page">
@@ -15,7 +14,24 @@
       <!-- 左侧品牌展示区 -->
       <div class="brand-panel">
         <div class="brand-content">
-          <div class="brand-icon">🧠</div>
+          <!-- 爱心心理健康 SVG 图标（替换原来的🧠emoji） -->
+          <div class="brand-icon">
+            <svg viewBox="0 0 64 64" width="36" height="36" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#fff" stop-opacity="0.95" />
+                  <stop offset="100%" stop-color="#fff" stop-opacity="0.7" />
+                </linearGradient>
+              </defs>
+              <!-- 心形 -->
+              <path d="M32 50 C14 38 10 26 16 18 C22 10 28 10 32 18 C36 10 42 10 48 18 C54 26 50 38 32 50Z"
+                fill="url(#hg)" />
+              <!-- 脑电波 -->
+              <path d="M14 22 Q18 18 22 22 Q26 26 30 22 Q34 18 38 22 Q42 26 46 22 Q50 18 52 22"
+                fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="1.5" stroke-linecap="round"
+                transform="translate(0, -6)" />
+            </svg>
+          </div>
           <h1 class="brand-title">心理健康辅助干预平台</h1>
           <p class="brand-desc">关注心理健康 · 守护美好生活</p>
           <div class="brand-features">
@@ -372,7 +388,6 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 34px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.15);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);

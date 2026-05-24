@@ -5,7 +5,7 @@
         <h1>每日情绪记录</h1>
         <p>记录当天不同时间的情绪变化，用于后续趋势分析。</p>
       </div>
-      <el-button plain @click="$router.push('/mood/chart')">
+      <el-button plain @click="$router.push('/report')">
         <i class="el-icon-data-line"></i>
         查看分析
       </el-button>

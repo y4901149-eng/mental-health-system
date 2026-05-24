@@ -51,10 +51,10 @@ public class CrisisAlertServiceImpl extends ServiceImpl<CrisisAlertMapper, Crisi
     }
 
     @Override
-    public void handleAlert(Long id, Long adminId, String remark) {
+    public void handleAlert(Long id, Long adminId, String remark, String status) {
         CrisisAlert alert = getById(id);
         if (alert != null) {
-            alert.setHandleStatus("RESOLVED");
+            alert.setHandleStatus(status != null && !status.isEmpty() ? status : "RESOLVED");
             alert.setHandledBy(adminId);
             alert.setHandleRemark(remark);
             updateById(alert);

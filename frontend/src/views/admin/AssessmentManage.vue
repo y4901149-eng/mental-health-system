@@ -1,16 +1,21 @@
-<!-- 管理员 - 量表管理 -->
 <template>
   <div class="page-container">
-    <div class="page-header">
-      <h2 class="page-title">📋 量表管理</h2>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <el-input v-model="keyword" placeholder="搜索量表名称" size="medium" clearable
-          prefix-icon="el-icon-search" style="width:240px;" @keyup.enter.native="search" @clear="search" />
-        <el-button size="medium" type="primary" icon="el-icon-search" @click="search">搜索</el-button>
-        <el-button size="medium" @click="keyword='';search()">重置</el-button>
-        <el-button size="medium" type="primary" @click="openCreate">新建量表</el-button>
+    <!-- 顶部：板块 tab + 操作 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h2 style="font-size:18px;font-weight:700;color:#1A2332;margin:0;">量表管理</h2>
+      <div style="display:flex;gap:8px;">
+        <el-button size="small" @click="showCatDialog = true">管理板块</el-button>
+        <el-button size="small" type="primary" @click="openCreate">新建量表</el-button>
       </div>
     </div>
+
+    <!-- 板块 tabs -->
+    <el-tabs v-model="activeCategoryId" @tab-click="search" style="margin-bottom:12px;">
+      <el-tab-pane label="全部" :name="''" />
+      <el-tab-pane v-for="c in categories" :key="c.id" :label="c.name" :name="String(c.id)" />
+    </el-tabs>
+
+    <!-- 量表列表 -->
     <el-card shadow="never">
       <el-table :data="list" stripe v-loading="loading" style="width:100%;"
         :header-cell-style="{background:'#F8FAFF',color:'#2C3E50',textAlign:'center'}"
@@ -56,6 +61,15 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
+            <el-form-item label="所属板块">
+              <el-select v-model="form.categoryId" placeholder="请选择" style="width:100%;" clearable>
+                <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :span="12">
             <el-form-item label="状态">
               <el-select v-model="form.status" style="width:100%;">
                 <el-option label="草稿" value="draft" /><el-option label="已发布" value="published" />
@@ -68,6 +82,37 @@
         <el-button @click="showDialog = false">取消</el-button>
         <el-button type="primary" @click="submitForm" :loading="submitting">{{ editingId ? '保存' : '创建' }}</el-button>
       </div>
+    </el-dialog>
+
+    <!-- 板块管理弹窗 -->
+    <el-dialog title="测评板块管理" :visible.sync="showCatDialog" width="500px" :close-on-click-modal="false">
+      <div v-for="c in categories" :key="c.id"
+        style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #F0F4FF;">
+        <div>
+          <strong>{{ c.name }}</strong>
+          <el-tag v-if="c.enabled !== 1" size="mini" type="info" style="margin-left:6px;">已停用</el-tag>
+        </div>
+        <div>
+          <el-button type="text" size="mini" @click="editCategory(c)">编辑</el-button>
+          <el-button type="text" size="mini" :style="{color:c.enabled===1?'#E6A23C':'#67C23A'}"
+            @click="toggleCategory(c)">{{ c.enabled===1?'停用':'启用' }}</el-button>
+          <el-button type="text" size="mini" style="color:#F56C6C;" @click="deleteCategory(c)">删除</el-button>
+        </div>
+      </div>
+      <div style="margin-top:14px;text-align:center;">
+        <el-button size="small" type="primary" @click="showCatForm=true;catForm={name:'',sortOrder:0}">新增板块</el-button>
+      </div>
+      <!-- 新增/编辑板块 -->
+      <el-dialog title="编辑板块" :visible.sync="showCatForm" width="380px" append-to-body :close-on-click-modal="false">
+        <el-form :model="catForm" label-width="80px" size="small">
+          <el-form-item label="名称"><el-input v-model="catForm.name" maxlength="50" /></el-form-item>
+          <el-form-item label="排序"><el-input-number v-model="catForm.sortOrder" :min="0" :max="99" /></el-form-item>
+        </el-form>
+        <div slot="footer">
+          <el-button @click="showCatForm=false">取消</el-button>
+          <el-button type="primary" @click="submitCategory" :loading="catSubmitting">保存</el-button>
+        </div>
+      </el-dialog>
     </el-dialog>
 
     <!-- 题目管理弹窗 -->
@@ -99,22 +144,10 @@
     <el-dialog :title="qEditingId ? '编辑题目' : '新增题目'" :visible.sync="qFormVisible" width="550px" :close-on-click-modal="false">
       <el-form :model="qForm" label-width="100px" size="small">
         <el-form-item label="题目内容"><el-input v-model="qForm.questionText" type="textarea" :rows="2" /></el-form-item>
-        <el-row :gutter="12">
-          <el-col :span="12"><el-form-item label="选项A"><el-input v-model="qForm.optionA" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="分值A"><el-input-number v-model="qForm.scoreA" :min="0" :max="5" /></el-form-item></el-col>
-        </el-row>
-        <el-row :gutter="12">
-          <el-col :span="12"><el-form-item label="选项B"><el-input v-model="qForm.optionB" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="分值B"><el-input-number v-model="qForm.scoreB" :min="0" :max="5" /></el-form-item></el-col>
-        </el-row>
-        <el-row :gutter="12">
-          <el-col :span="12"><el-form-item label="选项C"><el-input v-model="qForm.optionC" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="分值C"><el-input-number v-model="qForm.scoreC" :min="0" :max="5" /></el-form-item></el-col>
-        </el-row>
-        <el-row :gutter="12">
-          <el-col :span="12"><el-form-item label="选项D"><el-input v-model="qForm.optionD" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="分值D"><el-input-number v-model="qForm.scoreD" :min="0" :max="5" /></el-form-item></el-col>
-        </el-row>
+        <el-row :gutter="12"><el-col :span="12"><el-form-item label="选项A"><el-input v-model="qForm.optionA" /></el-form-item></el-col><el-col :span="12"><el-form-item label="分值A"><el-input-number v-model="qForm.scoreA" :min="0" :max="5" /></el-form-item></el-col></el-row>
+        <el-row :gutter="12"><el-col :span="12"><el-form-item label="选项B"><el-input v-model="qForm.optionB" /></el-form-item></el-col><el-col :span="12"><el-form-item label="分值B"><el-input-number v-model="qForm.scoreB" :min="0" :max="5" /></el-form-item></el-col></el-row>
+        <el-row :gutter="12"><el-col :span="12"><el-form-item label="选项C"><el-input v-model="qForm.optionC" /></el-form-item></el-col><el-col :span="12"><el-form-item label="分值C"><el-input-number v-model="qForm.scoreC" :min="0" :max="5" /></el-form-item></el-col></el-row>
+        <el-row :gutter="12"><el-col :span="12"><el-form-item label="选项D"><el-input v-model="qForm.optionD" /></el-form-item></el-col><el-col :span="12"><el-form-item label="分值D"><el-input-number v-model="qForm.scoreD" :min="0" :max="5" /></el-form-item></el-col></el-row>
         <el-form-item label="排序号"><el-input-number v-model="qForm.sortOrder" :min="1" :max="99" /></el-form-item>
       </el-form>
       <div slot="footer">
@@ -128,33 +161,41 @@
 <script>
 import { getAssessmentList, createAssessment, updateAssessment, deleteAssessment,
   getAssessmentQuestions, createQuestion, updateQuestion, deleteQuestion } from '@/api/admin/assessment'
+import { getCategoryList, createCategory, updateCategory, deleteCategory, toggleCategory as toggleCatAPI } from '@/api/assessment'
 
 export default {
   name: 'AssessmentManage',
   data() {
     return {
-      list:[], total:0, pageNum:1, pageSize:15, keyword:'', loading:false,
+      list:[], total:0, pageNum:1, pageSize:15, loading:false,
+      activeCategoryId:'', categories:[],
       showDialog:false, submitting:false, editingId:null,
-      form:{ title:'', description:'', type:'depression', status:'draft' },
+      form:{ title:'', description:'', type:'depression', status:'draft', categoryId:null },
+      /* 板块管理 */
+      showCatDialog:false, showCatForm:false, catSubmitting:false,
+      catForm:{ name:'', sortOrder:0 }, catEditingId:null,
       /* 题目管理 */
       qVisible:false, qLoading:false, currentAssessment:null, questions:[],
       qFormVisible:false, qSubmitting:false, qEditingId:null,
       qForm:{ questionText:'', optionA:'', optionB:'', optionC:'', optionD:'', scoreA:0, scoreB:1, scoreC:2, scoreD:3, sortOrder:1 }
     }
   },
-  created(){this.fetch()},
+  created(){this.fetch();this.fetchCategories()},
   methods: {
     fetch(){
       this.loading=true
-      getAssessmentList({pageNum:this.pageNum,pageSize:this.pageSize,keyword:this.keyword||undefined})
-        .then(r=>{this.list=r.data.records||[];this.total=r.data.total||0}).finally(()=>{this.loading=false})
+      const params={pageNum:this.pageNum,pageSize:this.pageSize}
+      if(this.activeCategoryId) params.categoryId=parseInt(this.activeCategoryId)
+      getAssessmentList(params).then(r=>{this.list=r.data.records||[];this.total=r.data.total||0}).finally(()=>{this.loading=false})
     },
     search(){this.pageNum=1;this.fetch()},
+    fetchCategories(){getCategoryList().then(res=>{this.categories=res.data||[]}).catch(()=>{})},
     openCreate(){
-      this.editingId=null; this.form={title:'',description:'',type:'depression',status:'draft'}; this.showDialog=true
+      const defaultCat=this.activeCategoryId?parseInt(this.activeCategoryId):null
+      this.editingId=null; this.form={title:'',description:'',type:'depression',status:'draft',categoryId:defaultCat}; this.showDialog=true
     },
     openEdit(row){
-      this.editingId=row.id; this.form={title:row.title,description:row.description||'',type:row.type||'depression',status:row.status||'draft'}; this.showDialog=true
+      this.editingId=row.id; this.form={title:row.title,description:row.description||'',type:row.type||'depression',status:row.status||'draft',categoryId:row.categoryId||null}; this.showDialog=true
     },
     submitForm(){
       this.submitting=true
@@ -167,6 +208,27 @@ export default {
     },
     handleDelete(id){
       this.$confirm('确定删除？关联题目也将删除。','提示',{type:'warning'}).then(()=>{deleteAssessment(id).then(()=>{this.$message.success('已删除');this.fetch()})}).catch(()=>{})
+    },
+    /* 板块管理 */
+    editCategory(c){this.catEditingId=c.id;this.catForm={name:c.name,sortOrder:c.sortOrder||0};this.showCatForm=true},
+    submitCategory(){
+      if(!this.catForm.name||!this.catForm.name.trim()){this.$message.warning('请输入名称');return}
+      this.catSubmitting=true
+      const p=this.catEditingId?updateCategory(this.catEditingId,this.catForm):createCategory(this.catForm)
+      p.then(()=>{this.$message.success('已保存');this.showCatForm=false;this.fetchCategories()}).finally(()=>{this.catSubmitting=false})
+    },
+    toggleCategory(c){
+      const act=c.enabled===1?'停用':'启用'
+      this.$confirm('确定'+act+'该板块？').then(()=>{
+        toggleCatAPI(c.id).then(()=>{this.$message.success('已'+act);this.fetchCategories()})
+      }).catch(()=>{})
+    },
+    deleteCategory(c){
+      this.$confirm('确定删除该板块？','提示',{type:'warning'}).then(()=>{
+        deleteCategory(c.id).then(()=>{this.$message.success('已删除');this.fetchCategories()}).catch(e=>{
+          this.$message.error((e.response&&e.response.data&&e.response.data.message)||'删除失败')
+        })
+      }).catch(()=>{})
     },
     /* 题目管理 */
     showQuestions(row){

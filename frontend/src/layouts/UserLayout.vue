@@ -3,7 +3,15 @@
   <div class="main-layout">
     <div class="sidebar">
       <div class="sidebar-logo">
-        <div class="logo-icon"><span class="logo-emoji">🧠</span></div>
+        <div class="logo-icon">
+          <svg viewBox="0 0 64 64" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
+            <path d="M32 50 C14 38 10 26 16 18 C22 10 28 10 32 18 C36 10 42 10 48 18 C54 26 50 38 32 50Z"
+              fill="#fff" opacity="0.95" />
+            <path d="M14 22 Q18 18 22 22 Q26 26 30 22 Q34 18 38 22 Q42 26 46 22 Q50 18 52 22"
+              fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" stroke-linecap="round"
+              transform="translate(0, -6)" />
+          </svg>
+        </div>
         <div class="logo-text">
           <span class="logo-title">心理健康平台</span>
           <span class="logo-version">v1.0</span>
@@ -15,10 +23,10 @@
         <el-menu-item index="/assessment"><i class="el-icon-document"></i><span>心理评估</span></el-menu-item>
         <el-menu-item index="/article"><i class="el-icon-reading"></i><span>健康知识</span></el-menu-item>
         <el-menu-item index="/mood"><i class="el-icon-data-line"></i><span>情绪记录</span></el-menu-item>
-        <el-menu-item index="/appointment"><i class="el-icon-date"></i><span>预约咨询</span></el-menu-item>
         <el-menu-item index="/diary"><i class="el-icon-notebook-2"></i><span>心情日记</span></el-menu-item>
-        <el-menu-item index="/chat"><i class="el-icon-chat-dot-round"></i><span>AI 共情</span></el-menu-item>
         <el-menu-item index="/report"><i class="el-icon-data-analysis"></i><span>情绪周报</span></el-menu-item>
+        <el-menu-item index="/chat"><i class="el-icon-chat-dot-round"></i><span>AI 共情</span></el-menu-item>
+        <el-menu-item index="/appointment"><i class="el-icon-date"></i><span>预约咨询</span></el-menu-item>
         <el-menu-item index="/profile"><i class="el-icon-user"></i><span>个人中心</span></el-menu-item>
         <el-menu-item index="/emergency"><i class="el-icon-warning-outline"></i><span>紧急联系人</span></el-menu-item>
       </el-menu>
@@ -95,7 +103,6 @@ export default {
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg,#409EFF,#6C63FF); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.logo-emoji { font-size: 18px; }
 .logo-text { display: flex; flex-direction: column; }
 .logo-title { font-size: 15px; font-weight: 700; color: #E8EDF5; letter-spacing: 0.3px; }
 .logo-version { font-size: 11px; color: #5A6A8A; margin-top: 1px; }

@@ -2,6 +2,7 @@ package com.mentalhealth.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.mentalhealth.entity.Diary;
+import com.mentalhealth.service.AIService;
 import com.mentalhealth.service.DiaryService;
 import com.mentalhealth.utils.MoodAnalyzer;
 import com.mentalhealth.vo.ResultVO;
@@ -16,6 +17,9 @@ public class DiaryController {
 
     @Autowired
     private DiaryService diaryService;
+
+    @Autowired
+    private AIService aiService;
 
     @GetMapping("/list")
     public ResultVO<IPage<Diary>> list(
@@ -46,6 +50,8 @@ public class DiaryController {
             diary.setEmotionScore((double) analysis.emotionScore);
         }
         diaryService.save(diary);
+        // 危机关键词检测（异步无阻塞）
+        aiService.checkDiaryCrisis(diary.getContent(), userId);
         return ResultVO.success();
     }
 

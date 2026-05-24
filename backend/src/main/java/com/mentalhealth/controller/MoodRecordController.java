@@ -1,6 +1,7 @@
 package com.mentalhealth.controller;
 
 import com.mentalhealth.entity.MoodRecord;
+import com.mentalhealth.service.AIService;
 import com.mentalhealth.service.MoodRecordService;
 import com.mentalhealth.vo.ResultVO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,12 +21,17 @@ public class MoodRecordController {
     @Autowired
     private MoodRecordService moodRecordService;
 
-    /** 记录一次情绪 */
+    @Autowired
+    private AIService aiService;
+
+    /** 记录一次情绪（保存后自动检测是否触发危机预警） */
     @PostMapping("/record")
     public ResultVO<?> record(@RequestBody MoodRecord moodRecord, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         moodRecord.setUserId(userId);
         moodRecordService.recordMood(moodRecord);
+        // 实时检查情绪分数是否触发预警
+        aiService.checkMoodOnly(userId);
         return ResultVO.success();
     }
 

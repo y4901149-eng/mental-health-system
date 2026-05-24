@@ -25,11 +25,15 @@ public class AdminAssessmentController {
     public ResultVO<IPage<Assessment>> list(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "15") Integer pageSize,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer categoryId) {
         LambdaQueryWrapper<Assessment> wrapper = new LambdaQueryWrapper<Assessment>()
                 .orderByDesc(Assessment::getId);
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.like(Assessment::getTitle, keyword);
+        }
+        if (categoryId != null) {
+            wrapper.eq(Assessment::getCategoryId, categoryId);
         }
         return ResultVO.success(assessmentMapper.selectPage(new Page<>(pageNum, pageSize), wrapper));
     }
@@ -50,6 +54,7 @@ public class AdminAssessmentController {
         if (assessment.getDescription() != null) existing.setDescription(assessment.getDescription());
         if (assessment.getType() != null) existing.setType(assessment.getType());
         if (assessment.getStatus() != null) existing.setStatus(assessment.getStatus());
+        if (assessment.getCategoryId() != null) existing.setCategoryId(assessment.getCategoryId());
         assessmentMapper.updateById(existing);
         return ResultVO.success();
     }

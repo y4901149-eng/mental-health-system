@@ -31,6 +31,9 @@ public class Assessment {
     /** 状态: draft-草稿, published-发布, closed-关闭 */
     private String status;
 
+    /** 所属板块ID, 关联 assessment_category.id */
+    private Integer categoryId;
+
     /** 题目数量 */
     private Integer questionCount;
 

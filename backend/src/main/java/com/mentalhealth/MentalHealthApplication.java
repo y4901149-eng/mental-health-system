@@ -3,12 +3,14 @@ package com.mentalhealth;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 心理健康辅助干预平台 - 启动类
  * 作用：Spring Boot 项目入口，启动内嵌 Tomcat 并自动装配所有组件
  */
 @SpringBootApplication
+@EnableScheduling
 @MapperScan("com.mentalhealth.mapper")
 public class MentalHealthApplication {
 
