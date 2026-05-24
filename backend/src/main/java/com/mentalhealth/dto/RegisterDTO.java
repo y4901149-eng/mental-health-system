@@ -10,9 +10,9 @@ import javax.validation.constraints.Size;
  */
 @Data
 public class RegisterDTO {
-    /** 用户名 - 3-20位 */
+    /** 用户名 - 2-20位 */
     @NotBlank(message = "用户名不能为空")
-    @Size(min = 3, max = 20, message = "用户名长度需在3-20之间")
+    @Size(min = 2, max = 20, message = "用户名长度需在2-20之间")
     private String username;
 
     /** 密码 - 最少6位 */

@@ -72,7 +72,7 @@
           <el-form-item prop="username">
             <el-input
               v-model="form.username"
-              :placeholder="isLoginMode ? '请输入用户名' : '请设置用户名（3-20位）'"
+              :placeholder="isLoginMode ? '请输入用户名' : '请设置用户名（2-20位）'"
               prefix-icon="el-icon-user"
               autocomplete="username"
               size="large"
@@ -192,7 +192,7 @@ export default {
       const baseRules = {
         username: [
           { required: true, message: '请输入用户名', trigger: 'blur' },
-          { min: 3, max: 20, message: '用户名长度3-20位', trigger: 'blur' }
+          { min: 2, max: 20, message: '用户名长度2-20位', trigger: 'blur' }
         ],
         password: [
           { required: true, message: '请输入密码', trigger: 'blur' },
