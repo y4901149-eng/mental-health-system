@@ -553,6 +553,83 @@ INSERT INTO `user` VALUES (1,'admin','240be518fabd2724ddb6f04eeb1da5967448d7e831
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
 
+-- ============================================================
+-- 以下为后续新增的表（原 dump 中未包含）
+-- ============================================================
+
+-- 测评板块分类表
+-- 作用：心理测评按板块分类，管理员可增删改板块，用户端按板块筛选
+DROP TABLE IF EXISTS `assessment_category`;
+CREATE TABLE `assessment_category` (
+  `id`          BIGINT NOT NULL AUTO_INCREMENT,
+  `name`        VARCHAR(50) NOT NULL COMMENT '板块名称',
+  `sort_order`  INT DEFAULT 0 COMMENT '排序',
+  `enabled`     TINYINT DEFAULT 1 COMMENT '1=启用 0=停用',
+  `created_at`  DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='测评板块分类';
+
+INSERT INTO `assessment_category` (`id`, `name`, `sort_order`) VALUES
+(1, '情绪状态', 1),
+(2, '学习压力', 2),
+(3, '睡眠健康', 3),
+(4, '人际关系', 4),
+(5, '自我认知', 5);
+
+-- 咨询师（心理老师）表
+-- 作用：管理所有心理老师信息，包括姓名、擅长领域、简介、启用状态
+DROP TABLE IF EXISTS `counselor`;
+CREATE TABLE `counselor` (
+  `id`          BIGINT NOT NULL AUTO_INCREMENT,
+  `name`        VARCHAR(50) NOT NULL COMMENT '老师姓名',
+  `specialty`   VARCHAR(200) DEFAULT '' COMMENT '擅长领域',
+  `intro`       VARCHAR(500) DEFAULT '' COMMENT '简介',
+  `enabled`     TINYINT DEFAULT 1 COMMENT '1=启用 0=停用',
+  `created_at`  DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='咨询师（心理老师）';
+
+INSERT INTO `counselor` (`id`, `name`, `specialty`, `intro`) VALUES
+(1, '张一凡', '焦虑管理', '擅长处理学业焦虑、考试压力和社交焦虑问题'),
+(2, '徐艳艳', '情绪调节', '擅长情绪管理、抑郁倾向疏导和人际关系咨询'),
+(3, '丁宁', '压力管理', '擅长压力应对、时间管理和生涯规划咨询');
+
+-- 咨询师可预约时间段表（按星期配置）
+-- 作用：管理员为每位老师设置每周可预约时间段，用户端根据日期计算星期几展示对应时段
+DROP TABLE IF EXISTS `counselor_available_slot`;
+CREATE TABLE `counselor_available_slot` (
+  `id`            BIGINT NOT NULL AUTO_INCREMENT,
+  `counselor_id`  BIGINT NOT NULL COMMENT '关联 counselor.id',
+  `week_day`      TINYINT NOT NULL COMMENT '1=周一 2=周二 3=周三 4=周四 5=周五 6=周六 7=周日',
+  `time_slot`     VARCHAR(20) NOT NULL COMMENT '时间段 09:00-10:00',
+  `enabled`       TINYINT DEFAULT 1,
+  `created_at`    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_counselor_week_slot` (`counselor_id`, `week_day`, `time_slot`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='咨询师可预约时间段（按星期）';
+
+-- 初始排班：张一凡周一至五上午、徐艳艳周一三五下午、丁宁周二四全天
+INSERT INTO `counselor_available_slot` (`counselor_id`, `week_day`, `time_slot`) VALUES
+(1, 1, '09:00-10:00'), (1, 1, '10:00-11:00'),
+(1, 2, '09:00-10:00'), (1, 2, '10:00-11:00'),
+(1, 3, '09:00-10:00'), (1, 3, '10:00-11:00'),
+(1, 4, '09:00-10:00'), (1, 4, '10:00-11:00'),
+(1, 5, '09:00-10:00'), (1, 5, '10:00-11:00'),
+(2, 1, '14:00-15:00'), (2, 1, '15:00-16:00'),
+(2, 3, '14:00-15:00'), (2, 3, '15:00-16:00'),
+(2, 5, '14:00-15:00'), (2, 5, '15:00-16:00'),
+(3, 2, '09:00-10:00'), (3, 2, '10:00-11:00'), (3, 2, '14:00-15:00'), (3, 2, '15:00-16:00'),
+(3, 4, '09:00-10:00'), (3, 4, '10:00-11:00'), (3, 4, '14:00-15:00'), (3, 4, '15:00-16:00');
+
+-- 给 assessment 表补充 category_id 字段（如原 dump 没有）
+-- 作用：关联测评所属板块
+SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = 'mental_health' AND TABLE_NAME = 'assessment' AND COLUMN_NAME = 'category_id');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE assessment ADD COLUMN category_id INT DEFAULT NULL COMMENT \"关联 assessment_category.id\" AFTER type', 'SELECT \"category_id already exists\"');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 --
 -- Dumping routines for database 'mental_health'
 --
