@@ -117,7 +117,7 @@
               <el-input v-model="pwdForm.confirmPassword" type="password" show-password placeholder="再次输入新密码" />
             </el-form-item>
             <div class="form-actions">
-              <el-button type="primary" plain icon="el-icon-lock" :loading="pwdSaving" @click="changePwd">
+              <el-button type="primary" plain icon="el-icon-lock" class="password-submit-btn" :loading="pwdSaving" @click="changePwd">
                 更新密码
               </el-button>
             </div>
@@ -486,6 +486,27 @@ export default {
   display: flex;
   justify-content: flex-end;
   margin-top: 4px;
+}
+
+.password-submit-btn {
+  min-width: 152px;
+  height: 50px;
+  border-radius: 12px;
+  color: #fff !important;
+  background: #409eff !important;
+  border-color: #409eff !important;
+  font-weight: 700;
+}
+
+.password-submit-btn :deep(span),
+.password-submit-btn :deep(i) {
+  color: #fff !important;
+}
+
+.password-submit-btn:hover,
+.password-submit-btn:focus {
+  background: #2678d9 !important;
+  border-color: #2678d9 !important;
 }
 
 .security-card {

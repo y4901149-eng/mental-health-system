@@ -121,7 +121,7 @@
             :before-upload="handleUpload"
             accept="image/*"
           >
-            <el-button size="small" type="primary" plain>
+            <el-button size="small" type="primary" plain class="image-upload-btn">
               <i class="el-icon-upload"></i> 选择图片
             </el-button>
             <span style="margin-left:10px;font-size:12px;color:#909399;">支持 JPG/PNG</span>
@@ -577,6 +577,28 @@ export default {
 /* 上传预览 */
 .upload-preview { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
 .preview-img { width: 80px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #EBEEF5; }
+
+.image-upload-btn {
+  min-width: 120px;
+  height: 40px;
+  border-radius: 12px;
+  color: #fff !important;
+  background: #409EFF !important;
+  border-color: #409EFF !important;
+  font-weight: 700;
+}
+
+.image-upload-btn :deep(span),
+.image-upload-btn :deep(i) {
+  color: #fff !important;
+}
+
+.image-upload-btn:hover,
+.image-upload-btn:focus {
+  color: #fff !important;
+  background: #2678d9 !important;
+  border-color: #2678d9 !important;
+}
 
 .card-footer {
   display: flex;

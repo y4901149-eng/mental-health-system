@@ -1,23 +1,19 @@
-<!-- 文章列表页 -->
-
 <template>
   <div class="page-container">
-    <h2 class="page-title">📚 心理健康知识</h2>
+    <h2 class="page-title">心理健康知识</h2>
 
-    <!-- 分类筛选 -->
-    <el-tabs v-model="activeCategory" @tab-click="fetchList">
-      <el-tab-pane label="全部" name=""></el-tab-pane>
+    <el-tabs v-model="activeCategory" @tab-click="handleCategoryChange">
+      <el-tab-pane label="全部" name="all"></el-tab-pane>
       <el-tab-pane label="心理健康知识" name="knowledge"></el-tab-pane>
       <el-tab-pane label="治疗方法" name="therapy"></el-tab-pane>
       <el-tab-pane label="案例分享" name="case"></el-tab-pane>
     </el-tabs>
 
-    <!-- 文章卡片列表 -->
     <el-row :gutter="20">
       <el-col :span="8" v-for="item in list" :key="item.id" style="margin-bottom: 20px;">
         <el-card shadow="hover" @click.native="$router.push('/article/' + item.id)">
           <div class="article-cover" v-if="item.coverImage">
-            <img :src="item.coverImage" style="width: 100%; height: 160px; object-fit: cover;">
+            <img :src="item.coverImage" alt="" style="width: 100%; height: 160px; object-fit: cover;">
           </div>
           <div style="padding: 10px 0;">
             <h3 style="font-size: 16px; margin-bottom: 8px;">{{ item.title }}</h3>
@@ -26,18 +22,18 @@
             </p>
             <div style="margin-top: 10px; font-size: 12px; color: #909399;">
               <span>{{ item.author }}</span>
-              <span style="float: right;">👁 {{ item.viewCount || 0 }}</span>
+              <span style="float: right;">浏览 {{ item.viewCount || 0 }}</span>
             </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- 分页 -->
     <el-pagination
       v-if="total > 0"
       background
       layout="prev, pager, next"
+      :current-page="pageNum"
       :total="total"
       :page-size="pageSize"
       @current-change="handlePageChange"
@@ -53,7 +49,7 @@ export default {
   name: 'ArticleList',
   data() {
     return {
-      activeCategory: '',
+      activeCategory: 'all',
       list: [],
       total: 0,
       pageNum: 1,
@@ -65,14 +61,23 @@ export default {
   },
   methods: {
     fetchList() {
-      getArticleList({
+      const params = {
         pageNum: this.pageNum,
-        pageSize: this.pageSize,
-        category: this.activeCategory
-      }).then(res => {
+        pageSize: this.pageSize
+      }
+
+      if (this.activeCategory !== 'all') {
+        params.category = this.activeCategory
+      }
+
+      getArticleList(params).then(res => {
         this.list = res.data.records || []
         this.total = res.data.total || 0
       })
+    },
+    handleCategoryChange() {
+      this.pageNum = 1
+      this.fetchList()
     },
     handlePageChange(page) {
       this.pageNum = page

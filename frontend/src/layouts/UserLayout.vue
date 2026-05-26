@@ -13,7 +13,7 @@
           </svg>
         </div>
         <div class="logo-text">
-          <span class="logo-title">心理健康平台</span>
+          <span class="logo-title">心晴港湾</span>
           <span class="logo-version">v1.0</span>
         </div>
       </div>
@@ -73,7 +73,7 @@ export default {
   computed: {
     ...mapGetters(['userInfo']),
     activeMenu() { return this.$route.path },
-    currentPageTitle() { return titleMap[this.$route.path] || '心理健康平台' },
+    currentPageTitle() { return titleMap[this.$route.path] || '心晴港湾' },
     userInitial() {
       const name = this.userInfo ? this.userInfo.nickname : '用'
       return name.charAt(0).toUpperCase()

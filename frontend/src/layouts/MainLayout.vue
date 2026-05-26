@@ -11,7 +11,7 @@
           <span class="logo-emoji">🧠</span>
         </div>
         <div class="logo-text">
-          <span class="logo-title">心理健康平台</span>
+          <span class="logo-title">心晴港湾</span>
           <span class="logo-version">v1.0</span>
         </div>
       </div>
@@ -162,7 +162,7 @@ export default {
     },
 
     currentPageTitle() {
-      return titleMap[this.$route.path] || '心理健康平台'
+      return titleMap[this.$route.path] || '心晴港湾'
     },
 
     /** 用户头像首字 */

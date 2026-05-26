@@ -4,6 +4,7 @@
     <!-- ===== 欢迎区 ===== -->
     <div class="welcome-section">
       <div class="welcome-text">
+        <span class="platform-name">心晴港湾</span>
         <h2>你好，{{ userInfo ? userInfo.nickname : '用户' }}</h2>
         <p>{{ encouragements[currentEncouragement] }}</p>
       </div>
@@ -207,6 +208,20 @@ export default {
 }
 .welcome-text h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
 .welcome-text p { font-size: 14px; opacity: 0.9; }
+.platform-name {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.24);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
 .welcome-actions { display: flex; gap: 10px; flex-shrink: 0; }
 .welcome-actions .el-button--primary { background: rgba(255,255,255,0.2) !important; border: 1px solid rgba(255,255,255,0.3) !important; color: #fff !important; }
 .welcome-actions .el-button--primary:hover { background: rgba(255,255,255,0.3) !important; }
