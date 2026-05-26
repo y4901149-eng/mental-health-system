@@ -4,7 +4,7 @@
     <!-- ===== 欢迎区 ===== -->
     <div class="welcome-section">
       <div class="welcome-text">
-        <span class="platform-name">心晴港湾</span>
+        <span class="platform-name">心聆</span>
         <h2>你好，{{ userInfo ? userInfo.nickname : '用户' }}</h2>
         <p>{{ encouragements[currentEncouragement] }}</p>
       </div>

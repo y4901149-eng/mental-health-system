@@ -32,8 +32,8 @@
                 transform="translate(0, -6)" />
             </svg>
           </div>
-          <h1 class="brand-title">心晴港湾</h1>
-          <p class="brand-desc">让情绪被看见，让支持更靠近</p>
+          <h1 class="brand-title">心聆</h1>
+          <p class="brand-desc">听见情绪，陪你走过每一次波动</p>
           <div class="brand-features">
             <div class="brand-feature">
               <span class="bf-icon">✓</span>
@@ -59,7 +59,7 @@
       <div class="form-panel">
         <div class="form-header">
           <h2>{{ isLoginMode ? '欢迎回来' : '创建账号' }}</h2>
-          <p>{{ isLoginMode ? '登录心晴港湾，继续你的心理健康记录' : '加入心晴港湾，开启温柔的自我照护' }}</p>
+          <p>{{ isLoginMode ? '登录心聆，继续你的心理健康记录' : '加入心聆，开启温柔的自我照护' }}</p>
         </div>
 
         <el-form
